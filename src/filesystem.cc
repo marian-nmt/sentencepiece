@@ -38,7 +38,11 @@ class PosixReadableFile : public ReadableFile {
   util::Status status() const { return status_; }
 
   bool ReadLine(std::string *line) {
-    return static_cast<bool>(std::getline(*is_, *line));
+    bool ret = static_cast<bool>(std::getline(*is_, *line));
+    // Now that we're in binary mode, we have to throw out carriage return if present
+    if(*is_ && !line->empty() && line->back() == is_->widen('\r'))
+        line->pop_back();
+    return ret;
   }
 
   bool ReadAll(std::string *line) {

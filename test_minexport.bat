@@ -16,12 +16,15 @@ set PATH=c:\Program Files\Git\usr\bin;c:\MinGW\bin;%PATH%
 set CURRENT_PATH=%~dp0
 set LIBRARY_PATH=%CURRENT_PATH%build\root
 
+rename CMakeLists.txt CMakeLists.txt.stock
+rename src\CMakeLists.txt CMakeLists.txt.stock
+copy CMakeLists_minexport.txt CMakeLists.txt
+copy src\CMakeLists_minexport.txt src\CMakeLists.txt
+
 mkdir build
-copy protobuf-cpp-%PROTOBUF_VERSION%.zip build
 cd build
 
-rem curl -O -L https://github.com/google/protobuf/releases/download/v%PROTOBUF_VERSION%/protobuf-cpp-%PROTOBUF_VERSION%.zip
-unzip protobuf-cpp-%PROTOBUF_VERSION%.zip
+unzip ..\protobuf-cpp-%PROTOBUF_VERSION%.zip
 cd protobuf-%PROTOBUF_VERSION%\cmake
 cmake . -A %PLATFORM% -DCMAKE_INSTALL_PREFIX=%LIBRARY_PATH% -DBUILD_SHARED_LIBS=true -Dprotobuf_MSVC_STATIC_RUNTIME=OFF -DCMAKE_SYSTEM_VERSION=8.1 || goto :error
 rem cmake . -A %PLATFORM% -DCMAKE_INSTALL_PREFIX=%LIBRARY_PATH% || goto :error
