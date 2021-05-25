@@ -15,6 +15,13 @@
 #ifndef NORMALIZER_CASE_ENCODER_H_
 #define NORMALIZER_CASE_ENCODER_H_
 
+// Reduce liklihood of regex_error exceptions on VSC compiled bins by increasing
+// library specific stack size and complexity limits
+#ifdef _MSC_VER
+#define _REGEX_MAX_STACK_COUNT 200000
+#define _REGEX_MAX_COMPLEXITY_COUNT 0
+#endif
+
 #include <memory>
 #include <set>
 #include <string>
@@ -179,34 +186,39 @@ public:
     auto nrm_it = normalized->cbegin();
     auto n2o_it = norm_to_orig->cbegin();
 
-    while(std::regex_search(sig_it, signature_.cend(), m, e)) {
-      auto span = m[0];
-      size_t len = std::distance(sig_it, span.first);
-      normalized_temp.insert(normalized_temp.end(), nrm_it, nrm_it + len);
-      norm_to_orig_temp.insert(norm_to_orig_temp.end(), n2o_it, n2o_it + len);
+    try {
+      while(std::regex_search(sig_it, signature_.cend(), m, e)) {
+        auto span = m[0];
+        size_t len = std::distance(sig_it, span.first);
+        normalized_temp.insert(normalized_temp.end(), nrm_it, nrm_it + len);
+        norm_to_orig_temp.insert(norm_to_orig_temp.end(), n2o_it, n2o_it + len);
 
-      sig_it += len; 
-      nrm_it += len;
-      n2o_it += len;
-      normalized_temp.push_back(cAllUppercase);
-      norm_to_orig_temp.push_back(*n2o_it);
+        sig_it += len; 
+        nrm_it += len;
+        n2o_it += len;
+        normalized_temp.push_back(cAllUppercase);
+        norm_to_orig_temp.push_back(*n2o_it);
             
-      while(sig_it != span.second) {
-        if(*sig_it == cUppercase) {
-          sig_it++; 
-          nrm_it++;
-          n2o_it++;
+        while(sig_it != span.second) {
+          if(*sig_it == cUppercase) {
+            sig_it++; 
+            nrm_it++;
+            n2o_it++;
+          }
+          sig_it++;
+          normalized_temp.push_back(*nrm_it++);
+          norm_to_orig_temp.push_back(*n2o_it++);
         }
-        sig_it++;
-        normalized_temp.push_back(*nrm_it++);
-        norm_to_orig_temp.push_back(*n2o_it++);
-      }
-      if(sig_it != signature_.cend()) { 
-        if(*sig_it != cUppercase) {
-          normalized_temp.push_back(cLowercase);
-          norm_to_orig_temp.push_back(*n2o_it);
+        if(sig_it != signature_.cend()) { 
+          if(*sig_it != cUppercase) {
+            normalized_temp.push_back(cLowercase);
+            norm_to_orig_temp.push_back(*n2o_it);
+          }
         }
       }
+    } catch (std::regex_error&) {
+        LOG(WARNING) << "regex_error with unicode case encoding; rejecting sentence";
+        return;
     }
 
     if(nrm_it != normalized->cend())
