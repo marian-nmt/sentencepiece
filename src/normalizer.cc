@@ -136,7 +136,7 @@ util::Status Normalizer::Normalize(absl::string_view input,
     return NormalizePrefix(input); 
   };
 
-  std::unique_ptr<CaseEncoder> case_encoder = CaseEncoder::Create(spec_->encode_case(), spec_->decode_case());
+  std::unique_ptr<CaseEncoder> case_encoder = CaseEncoder::Create(spec_->encode_case(), spec_->decode_case(), spec_->remove_extra_whitespaces());
   if(case_encoder) {
     case_encoder->setNormalizer(normalize_prefix_fn);
     normalize_prefix_fn = [&case_encoder](absl::string_view input) { 

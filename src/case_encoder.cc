@@ -17,12 +17,12 @@
 namespace sentencepiece {
 namespace normalizer {
 
-std::unique_ptr<CaseEncoder> CaseEncoder::Create(bool encodeCase, bool decodeCase) {
+std::unique_ptr<CaseEncoder> CaseEncoder::Create(bool encodeCase, bool decodeCase, bool removeExtraWhiteSpace) {
   if(encodeCase && decodeCase) {
     LOG(ERROR) << "Cannot set both encodeCase=true and decodeCase=true";
     return nullptr;
   } else if(encodeCase) {
-    return std::unique_ptr<CaseEncoder>(new UpperCaseEncoder());
+    return std::unique_ptr<CaseEncoder>(new UpperCaseEncoder(removeExtraWhiteSpace));
   } else if(decodeCase) {
     return std::unique_ptr<CaseEncoder>(new UpperCaseDecoder());
   } else {
