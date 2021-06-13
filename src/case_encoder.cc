@@ -30,6 +30,11 @@ std::unique_ptr<CaseEncoder> CaseEncoder::Create(bool encodeCase, bool decodeCas
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////
+// Implements finite state automaton for regex: Uu+(sss|p|$)+Uu+(sss|p|$)+(Uu+(sss|p|$)+)+
+// std::regex seems to be causing weird issues with stack overflow etc. on Windows. 
+// This here should just work.
+
 constexpr size_t npos = -1;
 
 constexpr int fsa[][4] = {
@@ -69,13 +74,15 @@ inline int alphabet(char c) {
   };
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////
+
 inline int delta(int state, char c) {
   int a = alphabet(c);
   return a != -1 ? fsa[state][a] : -1;
 }
 
 size_t searchLongestSuffix(const char* data, size_t length) {
-  size_t found = -1;
+  size_t found = npos;
   int state = 0;
   
   if(accept[state]) 
