@@ -27,7 +27,7 @@ option(SPM_TCMALLOC_STATIC "Link static library of TCMALLOC." OFF)
 option(SPM_NO_THREADLOCAL "Disable thread_local operator" OFF)
 option(SPM_USE_BUILTIN_PROTOBUF "Use built-in protobuf" ON)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (UNIX)

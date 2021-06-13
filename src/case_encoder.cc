@@ -58,7 +58,7 @@ constexpr bool accept[16] = {
   false, false, false, false
 };
 
-constexpr int alphabet(char c) {
+inline int alphabet(char c) {
   switch (c) {
     case 'U': return 0;
     case 'p': return 1;
@@ -69,7 +69,7 @@ constexpr int alphabet(char c) {
   };
 }
 
-constexpr int delta(int state, char c) {
+inline int delta(int state, char c) {
   int a = alphabet(c);
   return a != -1 ? fsa[state][a] : -1;
 }
