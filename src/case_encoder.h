@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 #include <deque>
-#include <regex>
 
 #include "common.h"
 #include "third_party/absl/strings/string_view.h"
@@ -28,6 +27,8 @@
 
 namespace sentencepiece {
 namespace normalizer {
+
+std::vector<std::pair<const char*, const char*>> search(const std::string& input);
 
 constexpr char cUppercase    = 'U';
 constexpr char cAllUppercase = 'A';
@@ -162,23 +163,20 @@ public:
     if(!seenThreeSpans_)
       return;
 
-    // @TODO: implement this without regex, this is too slow
-    std::smatch m;
-    std::regex e("(?:Uu+(sss|p)+){3,}"); // long-range sequence of 3 or more uppercase tokens
-    
     std::string normalized_temp;
     normalized_temp.reserve(normalized->size());
     
     std::vector<size_t> norm_to_orig_temp;
     norm_to_orig_temp.reserve(norm_to_orig->size());
 
-    auto sig_it = signature_.cbegin();
+    const char* sig_it = signature_.data();
+
     auto nrm_it = normalized->cbegin();
     auto n2o_it = norm_to_orig->cbegin();
 
-    while(std::regex_search(sig_it, signature_.cend(), m, e)) {
-      auto span = m[0];
+    for(const auto& span : search(signature_)) {
       size_t len = std::distance(sig_it, span.first);
+      
       normalized_temp.insert(normalized_temp.end(), nrm_it, nrm_it + len);
       norm_to_orig_temp.insert(norm_to_orig_temp.end(), n2o_it, n2o_it + len);
 
@@ -198,7 +196,7 @@ public:
         normalized_temp.push_back(*nrm_it++);
         norm_to_orig_temp.push_back(*n2o_it++);
       }
-      if(sig_it != signature_.cend()) { 
+      if(sig_it != signature_.data() + signature_.length()) { 
         if(*sig_it != cUppercase) {
           normalized_temp.push_back(cLowercase);
           norm_to_orig_temp.push_back(*n2o_it);

@@ -30,5 +30,85 @@ std::unique_ptr<CaseEncoder> CaseEncoder::Create(bool encodeCase, bool decodeCas
   }
 }
 
+constexpr size_t npos = -1;
+
+constexpr int fsa[][4] = {
+  {  7, -1, -1, -1},
+  { -1,  4,  5,  1},
+  {  3,  2, 14, -1},
+  { -1, -1, -1,  1},
+  {  3,  4,  5, -1},
+  { -1, -1,  6, -1},
+  { -1, -1,  4, -1},
+  { -1, -1, -1,  8},
+  { -1,  9, 10,  8},
+  { 11,  9, 10, -1},
+  { -1, -1, 12, -1},
+  { -1, -1, -1, 13},
+  { -1, -1,  9, -1},
+  { -1,  2, 14, 13},
+  { -1, -1, 15, -1},
+  { -1, -1,  2, -1}
+};
+
+constexpr bool accept[16] = {
+  false, false, false, false,
+  true,  false, false, false,
+  false, false, false, false,
+  false, false, false, false
+};
+
+constexpr int alphabet(char c) {
+  switch (c) {
+    case 'U': return 0;
+    case 'p': return 1;
+    case '$': return 1;
+    case 's': return 2;
+    case 'u': return 3;
+    default: return -1;
+  };
+}
+
+constexpr int delta(int state, char c) {
+  int a = alphabet(c);
+  return a != -1 ? fsa[state][a] : -1;
+}
+
+size_t searchLongestSuffix(const char* data, size_t length) {
+  size_t found = -1;
+  int state = 0;
+  
+  if(accept[state]) 
+    found = 0;
+
+  for(size_t i = 0; i < length; ++i) {
+    state = delta(state, data[i]);
+    
+    if(state == -1)
+      return found;
+
+    if(accept[state])
+      found = i + 1;
+  }
+
+  state = delta(state, '$');
+  if(state != -1 && accept[state])
+      found = length;
+
+  return found;
+}
+
+std::vector<std::pair<const char*, const char*>> search(const std::string& input) {
+  std::vector<std::pair<const char*, const char*>> results;
+  for(size_t i = 0; i < input.length(); ++i) {
+    size_t found = searchLongestSuffix(input.data() + i, input.length() - i);
+    if(found != npos) {
+      results.emplace_back(input.data() + i, input.data() + i + found);
+      i += found - 1;
+    }
+  }
+  return results;
+}
+
 }
 }
