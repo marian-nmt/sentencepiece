@@ -35,27 +35,30 @@ std::unique_ptr<CaseEncoder> CaseEncoder::Create(bool encodeCase, bool decodeCas
 // std::regex seems to be causing weird issues with stack overflow etc. on Windows. 
 // This here should just work.
 
-constexpr size_t npos = -1;
+constexpr size_t npos = -1; // invalid string position
+constexpr int s = -1;       // sink state
 
+// state transitions
 constexpr int fsa[][4] = {
-  {  7, -1, -1, -1},
-  { -1,  4,  5,  1},
-  {  3,  2, 14, -1},
-  { -1, -1, -1,  1},
-  {  3,  4,  5, -1},
-  { -1, -1,  6, -1},
-  { -1, -1,  4, -1},
-  { -1, -1, -1,  8},
-  { -1,  9, 10,  8},
-  { 11,  9, 10, -1},
-  { -1, -1, 12, -1},
-  { -1, -1, -1, 13},
-  { -1, -1,  9, -1},
-  { -1,  2, 14, 13},
-  { -1, -1, 15, -1},
-  { -1, -1,  2, -1}
+  {  7,  s,  s,  s},
+  {  s,  4,  5,  1},
+  {  3,  2, 14,  s},
+  {  s,  s,  s,  1},
+  {  3,  4,  5,  s},
+  {  s,  s,  6,  s},
+  {  s,  s,  4,  s},
+  {  s,  s,  s,  8},
+  {  s,  9, 10,  8},
+  { 11,  9, 10,  s},
+  {  s,  s, 12,  s},
+  {  s,  s,  s, 13},
+  {  s,  s,  9,  s},
+  {  s,  2, 14, 13},
+  {  s,  s, 15,  s},
+  {  s,  s,  2,  s}
 };
 
+// mark end state
 constexpr bool accept[16] = {
   false, false, false, false,
   true,  false, false, false,
@@ -63,6 +66,7 @@ constexpr bool accept[16] = {
   false, false, false, false
 };
 
+// map alphabet to position
 inline int alphabet(char c) {
   switch (c) {
     case 'U': return 0;
@@ -70,41 +74,52 @@ inline int alphabet(char c) {
     case '$': return 1;
     case 's': return 2;
     case 'u': return 3;
-    default: return -1;
+    default: return -1; // invalid entry
   };
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+// state transition function
 inline int delta(int state, char c) {
   int a = alphabet(c);
-  return a != -1 ? fsa[state][a] : -1;
+  return a != -1 ? fsa[state][a] : s;
 }
 
+// finds longest sequence that is accepted by the fsa starting 
+// from the beginning up to given length
 size_t searchLongestSuffix(const char* data, size_t length) {
+  // init
   size_t found = npos;
   int state = 0;
   
+  // is the start state an acceptor state?
   if(accept[state]) 
     found = 0;
 
   for(size_t i = 0; i < length; ++i) {
+    // try state transition
     state = delta(state, data[i]);
     
-    if(state == -1)
+    // we ended up in a sink state, return what we found so far
+    if(state == s)
       return found;
 
+    // not a sink state, so check if it's an acceptor state
     if(accept[state])
       found = i + 1;
   }
 
+  // we reached the end of the string, check if it makes us reach an acceptor state
   state = delta(state, '$');
-  if(state != -1 && accept[state])
+  if(state != s && accept[state])
       found = length;
 
   return found;
 }
 
+// find all the longest sequences that match the fsa in the string and return matched spans
+// note, this is greedy and we restart search after the previous longest sequence
 std::vector<std::pair<const char*, const char*>> search(const std::string& input) {
   std::vector<std::pair<const char*, const char*>> results;
   for(size_t i = 0; i < input.length(); ++i) {
