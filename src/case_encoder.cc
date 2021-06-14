@@ -101,16 +101,17 @@ size_t searchLongestSuffix(const char* data, size_t length) {
     // try state transition
     state = delta(state, data[i]);
     
-    // we ended up in a sink state, return what we found so far
+    // if we ended up in a sink state, return what we found so far
     if(state == s)
       return found;
 
-    // not a sink state, so check if it's an acceptor state
+    // not a sink state, so check if it's an acceptor state and move pointer if yes
     if(accept[state])
       found = i + 1;
   }
 
   // we reached the end of the string, check if it makes us reach an acceptor state
+  // in which case the whole sequence is matched
   state = delta(state, '$');
   if(state != s && accept[state])
       found = length;
