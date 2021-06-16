@@ -512,7 +512,7 @@ util::Status SentencePieceProcessor::Decode(
     unk_surface = model_proto_->trainer_spec().unk_surface().c_str();
 
   auto DecodeSentencePiece = [&](absl::string_view piece, int id,
-                                 bool is_bos_ws) -> std::string {
+                                 bool is_bos_ws, bool is_eos_ws) -> std::string {
     if (IsControl(id)) {  // <s>, </s>
       return "";          // invisible symbol.
     } else if (IsUnknown(id)) {
@@ -523,14 +523,28 @@ util::Status SentencePieceProcessor::Decode(
       }
     }
 
-    if (is_bos_ws &&
-        (!model_proto_ ||
-         (model_proto_ &&
-          (model_proto_->normalizer_spec().add_dummy_prefix() ||
-           model_proto_->normalizer_spec().remove_extra_whitespaces())))) {
-      // Consume if the current position is bos and
-      // piece starts with kSpaceSymbol.
-      absl::ConsumePrefix(&piece, kSpaceSymbol);
+    if(!model_proto_ || !model_proto_->has_trainer_spec()
+       || !model_proto_->trainer_spec().treat_whitespace_as_suffix()) {
+      if(is_bos_ws
+         && (!model_proto_
+             || (model_proto_
+                 && (model_proto_->normalizer_spec().add_dummy_prefix()
+                     || model_proto_->normalizer_spec().remove_extra_whitespaces())))) {
+        // Consume if the current position is bos and
+        // piece starts with kSpaceSymbol.
+        absl::ConsumePrefix(&piece, kSpaceSymbol);
+      }
+    } else {
+        if(is_eos_ws
+           && (!model_proto_
+               || (model_proto_
+                   && (model_proto_->normalizer_spec().add_dummy_prefix()
+                       || model_proto_->normalizer_spec().remove_extra_whitespaces())))) {
+          // Consume if the current position is eos and
+          // piece ends with kSpaceSymbol.
+          if(absl::EndsWith(piece, kSpaceSymbol))
+            piece.remove_suffix(3);
+        }
     }
 
     return absl::StrReplaceAll(piece, {{kSpaceSymbol, " "}});
@@ -594,13 +608,44 @@ util::Status SentencePieceProcessor::Decode(
     if (!IsByte(sp.id())) {
       RETURN_IF_ERROR(ProcessBytePieces(byte_start, i));
       byte_start = i + 1;
-      SetSurface(i, DecodeSentencePiece(sp.piece(), sp.id(), text->empty()));
+      bool is_eos_space = i == spt->pieces_size() - 1;
+      SetSurface(i, DecodeSentencePiece(sp.piece(), sp.id(), text->empty(), is_eos_space));
     }
   }
   RETURN_IF_ERROR(ProcessBytePieces(byte_start, spt->pieces_size()));
 
   if (denormalizer_) {
-    *text = denormalizer_->Normalize(*text);
+    std::string normalized;
+    std::vector<size_t> norm_to_orig;
+    denormalizer_->Normalize(*text, &normalized, &norm_to_orig);
+    *text = normalized;
+    std::map<int, int> orig_to_norm;
+    for(int i = 0; i < norm_to_orig.size(); i++) {
+      orig_to_norm.insert_or_assign(norm_to_orig[i], i);
+    }
+
+    int normalized_piece_surface_index = 0;
+    int text_piece_surface_index = 0;
+    // Text is de-normalized, but pieces still need de-normalization.
+    for(int i = 0; i < spt->pieces_size(); i++) {
+      auto *spiece = spt->mutable_pieces(i);
+      auto curr_surface = spiece->surface();
+
+      // De-normalize curr_surface using o2n. Missing chars are deleted (ambiguous)
+      std::string new_surface;
+      for(int j = text_piece_surface_index; j < text_piece_surface_index + curr_surface.size();
+          j++) {
+        auto norm_index = orig_to_norm.find(j + 1);
+        if(norm_index != orig_to_norm.end())
+          new_surface.push_back(normalized[norm_index->second - 1]);
+      }
+      text_piece_surface_index += curr_surface.size();
+
+      spiece->set_surface(new_surface);
+      spiece->set_begin(normalized_piece_surface_index);
+      normalized_piece_surface_index += new_surface.size();
+      spiece->set_end(normalized_piece_surface_index);
+    }
   }
 
   return util::OkStatus();
