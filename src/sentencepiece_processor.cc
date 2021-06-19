@@ -566,6 +566,7 @@ util::Status SentencePieceProcessor::Decode(
     sp->set_end(text->size() + surface.size());
     *text += surface;
   };
+
   auto ProcessBytePieces = [&](int begin, int end) -> util::Status {
     if (begin < end) {
       // Constructs byte sequence.
@@ -602,6 +603,7 @@ util::Status SentencePieceProcessor::Decode(
     }
     return util::OkStatus();
   };
+
   int byte_start = 0;
   for (int i = 0; i < spt->pieces_size(); ++i) {
     const auto &sp = spt->pieces(i);
@@ -629,22 +631,27 @@ util::Status SentencePieceProcessor::Decode(
     // Text is de-normalized, but pieces still need de-normalization.
     for(int i = 0; i < spt->pieces_size(); i++) {
       auto *spiece = spt->mutable_pieces(i);
-      auto curr_surface = spiece->surface();
+      if(!IsByte(spiece->id())) {
+        auto curr_surface = spiece->surface();
 
-      // De-normalize curr_surface using o2n. Missing chars are deleted (ambiguous)
-      std::string new_surface;
-      for(int j = text_piece_surface_index; j < text_piece_surface_index + curr_surface.size();
-          j++) {
-        auto norm_index = orig_to_norm.find(j + 1);
-        if(norm_index != orig_to_norm.end())
-          new_surface.push_back(normalized[norm_index->second - 1]);
+        // De-normalize curr_surface using o2n. Missing chars are deleted (ambiguous)
+        std::string new_surface;
+        for(int j = text_piece_surface_index; j < text_piece_surface_index + curr_surface.size();
+            j++) {
+          auto norm_index = orig_to_norm.find(j + 1);
+          if(norm_index != orig_to_norm.end())
+            new_surface.push_back(normalized[norm_index->second - 1]);
+        }
+        text_piece_surface_index += curr_surface.size();
+
+        spiece->set_surface(new_surface);
+        spiece->set_begin(normalized_piece_surface_index);
+        normalized_piece_surface_index += new_surface.size();
+        spiece->set_end(normalized_piece_surface_index);
+      } else {
+        normalized_piece_surface_index += spiece->surface().size();
+        text_piece_surface_index += spiece->surface().size();
       }
-      text_piece_surface_index += curr_surface.size();
-
-      spiece->set_surface(new_surface);
-      spiece->set_begin(normalized_piece_surface_index);
-      normalized_piece_surface_index += new_surface.size();
-      spiece->set_end(normalized_piece_surface_index);
     }
   }
 
