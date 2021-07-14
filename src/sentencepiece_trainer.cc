@@ -154,10 +154,10 @@ util::Status SentencePieceTrainer::MergeSpecsFromArgs(
       absl::SetFlag(&FLAGS_minloglevel, v);
       continue;
     } else if(key == "encode_unicode_case") {
-      bool b;
-      std::istringstream("true") >> std::boolalpha >> b;
-      normalizer_spec->set_encode_case(b);
-      denormalizer_spec->set_decode_case(b);
+      bool encode_unicode_case;
+      std::istringstream(value) >> std::boolalpha >> encode_unicode_case;
+      normalizer_spec->set_encode_case(encode_unicode_case);
+      denormalizer_spec->set_decode_case(encode_unicode_case);
       continue;
     }
 
