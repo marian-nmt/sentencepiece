@@ -102,7 +102,7 @@ else:
   cmdclass = {'build_ext': build_ext}
 
 setup(
-    name='sentencepiece',
+    name='sentencepiece-ms',
     author='Taku Kudo',
     author_email='taku@google.com',
     description='SentencePiece python wrapper',

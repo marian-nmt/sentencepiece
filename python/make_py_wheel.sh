@@ -41,10 +41,20 @@ build() {
 
   for i in /opt/python/*
   do
+    echo "===Building wheel for $i==="
+    $i/bin/python -m pip install --upgrade setuptools pip pytest
     $i/bin/python setup.py bdist
     strip build/*/*/*.so
     $i/bin/python setup.py bdist_wheel
-    $i/bin/python setup.py test
+
+    py_ver=$(basename $i)
+    whl=$(ls -t dist/sentencepiece*-${py_ver}*${TRG}.whl | head -1)
+    if [ -z "$whl" ]; then
+      echo "No wheel found for $i and $py_ver"
+    else
+      $i/bin/python -m pip install --force-reinstall $whl
+      $i/bin/python -m pytest ./test/
+    fi
     rm -fr build
     rm -fr *.so
   done
@@ -66,6 +76,6 @@ if [ "$1" = "native" ]; then
 elif [ "$#" -eq 1 ]; then
   run_docker quay.io/pypa/manylinux2014_${1}  ${1}
 else
-  run_docker quay.io/pypa/manylinux2014_i686 i686
+  # run_docker quay.io/pypa/manylinux2014_i686 i686 # 32 bit -- no longer needed
   run_docker quay.io/pypa/manylinux2014_x86_64 x86_64
 fi
