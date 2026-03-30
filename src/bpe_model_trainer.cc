@@ -23,7 +23,7 @@
 #include "third_party/absl/flags/flag.h"
 #include "util.h"
 
-ABSL_DECLARE_FLAG(bool, fast_bpe);
+ABSL_DECLARE_FLAG(bool, nlcodec_bpe);
 
 namespace sentencepiece {
 namespace bpe {
@@ -178,7 +178,7 @@ void Trainer::UpdateActiveSymbols() {
 util::Status Trainer::Train() {
   RETURN_IF_ERROR(status());
 
-  if (absl::GetFlag(FLAGS_fast_bpe)) {
+  if (absl::GetFlag(FLAGS_nlcodec_bpe)) {
     return TrainFast();
   }
 
@@ -339,7 +339,7 @@ util::Status Trainer::TrainFast() {
       total_count += s.second;
     }
   }
-  LOG(INFO) << "fast_bpe: " << term_freqs.size() << " word types, "
+  LOG(INFO) << "nlcodec_bpe: " << term_freqs.size() << " word types, "
             << total_count << " total tokens";
 
   // Compute target: SP reserves meta_pieces_ and required_chars_ slots
@@ -371,7 +371,7 @@ util::Status Trainer::TrainFast() {
     final_pieces_.emplace_back(t.name, -static_cast<float>(final_pieces_.size()));
   }
 
-  LOG(INFO) << "fast_bpe: produced " << final_pieces_.size() << " pieces "
+  LOG(INFO) << "nlcodec_bpe: produced " << final_pieces_.size() << " pieces "
             << "(target=" << target_merges << ")";
 
   // Ensure required_chars are included (SP needs these for full coverage)
@@ -389,7 +389,7 @@ util::Status Trainer::TrainFast() {
     final_pieces_.resize(max_pieces);
   }
 
-  LOG(INFO) << "fast_bpe: final " << final_pieces_.size() << " pieces";
+  LOG(INFO) << "nlcodec_bpe: final " << final_pieces_.size() << " pieces";
 
   return Save();
 }
