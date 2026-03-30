@@ -5,7 +5,12 @@
 #include "bpe_model_trainer_nlcodec.h"
 
 #include "third_party/absl/container/flat_hash_set.h"
+#include "third_party/absl/flags/flag.h"
 #include "util.h"
+
+// Flag defined here so it's available to all binaries (spm_train, tests, etc.)
+ABSL_FLAG(bool, nlcodec_bpe, false,
+          "Use nlcodec's fast BPE trainer (~8x faster). Only for --model_type=bpe.");
 
 namespace sentencepiece {
 namespace bpe {
