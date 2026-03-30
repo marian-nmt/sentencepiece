@@ -18,8 +18,12 @@
 #include <vector>
 
 #include "bpe_model_trainer.h"
+#include "nlcodec/bpe.h"
 #include "third_party/absl/container/flat_hash_set.h"
+#include "third_party/absl/flags/flag.h"
 #include "util.h"
+
+ABSL_DECLARE_FLAG(bool, fast_bpe);
 
 namespace sentencepiece {
 namespace bpe {
@@ -174,6 +178,10 @@ void Trainer::UpdateActiveSymbols() {
 util::Status Trainer::Train() {
   RETURN_IF_ERROR(status());
 
+  if (absl::GetFlag(FLAGS_fast_bpe)) {
+    return TrainFast();
+  }
+
   CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
   CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
 
@@ -309,5 +317,82 @@ util::Status Trainer::Train() {
 
   return Save();
 }
+
+// ─── Fast BPE using nlcodec's heap + linked-list algorithm ───────────────────
+
+util::Status Trainer::TrainFast() {
+  CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
+  CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
+
+  RETURN_IF_ERROR(LoadSentences());
+
+  if (trainer_spec_.split_by_whitespace()) {
+    SplitSentencesByWhitespace();
+  }
+
+  // Build term frequencies from SP's sentences_
+  nlcodec::TermFreqs term_freqs;
+  int64_t total_count = 0;
+  for (const auto &s : sentences_) {
+    if (!s.first.empty()) {
+      term_freqs[s.first] += s.second;
+      total_count += s.second;
+    }
+  }
+  LOG(INFO) << "fast_bpe: " << term_freqs.size() << " word types, "
+            << total_count << " total tokens";
+
+  // Compute target: SP reserves meta_pieces_ and required_chars_ slots
+  const int target_merges =
+      trainer_spec_.vocab_size() - meta_pieces_.size();
+  CHECK_GE_OR_RETURN(target_merges, 0);
+
+  nlcodec::BPELearnConfig config;
+  config.vocab_size = target_merges;
+  config.min_freq = 1;
+  config.min_co_ev = 1;
+  config.char_coverage = trainer_spec_.character_coverage();
+
+  auto types = nlcodec::learn_bpe_vocab(term_freqs, total_count, config);
+
+  // Convert nlcodec types to final_pieces_.
+  // Skip nlcodec's reserved tokens — SP adds its own via meta_pieces_.
+  absl::flat_hash_set<std::string> meta_names;
+  for (const auto &mp : meta_pieces_) {
+    meta_names.insert(mp.second.first);
+  }
+
+  absl::flat_hash_set<std::string> seen;
+  final_pieces_.clear();
+  for (const auto &t : types) {
+    if (t.level == nlcodec::Level::reserved) continue;
+    if (meta_names.count(t.name)) continue;
+    if (!seen.insert(t.name).second) continue;
+    final_pieces_.emplace_back(t.name, -static_cast<float>(final_pieces_.size()));
+  }
+
+  LOG(INFO) << "fast_bpe: produced " << final_pieces_.size() << " pieces "
+            << "(target=" << target_merges << ")";
+
+  // Ensure required_chars are included (SP needs these for full coverage)
+  for (const auto &w : Sorted(required_chars_)) {
+    const std::string ch_str = string_util::UnicodeCharToUTF8(w.first);
+    if (seen.insert(ch_str).second) {
+      final_pieces_.emplace_back(ch_str,
+                                 -static_cast<float>(final_pieces_.size()));
+    }
+  }
+
+  // Trim to exact target size (SP's Serialize expects exact match)
+  const size_t max_pieces = static_cast<size_t>(target_merges);
+  if (final_pieces_.size() > max_pieces) {
+    final_pieces_.resize(max_pieces);
+  }
+
+  LOG(INFO) << "fast_bpe: final " << final_pieces_.size() << " pieces";
+
+  return Save();
+}
+
 }  // namespace bpe
 }  // namespace sentencepiece

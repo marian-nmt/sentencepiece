@@ -126,7 +126,9 @@ set(SPM_TRAIN_SRCS
   char_model_trainer.cc
   bpe_model_trainer.cc
   sentencepiece_trainer.cc
-  pretokenizer_for_training.cc)
+  pretokenizer_for_training.cc
+  nlcodec/nlcodec.cpp
+  nlcodec/bpe.cpp)
 
 set(SPM_TEST_SRCS
   ${SPM_PROTO_HDRS}

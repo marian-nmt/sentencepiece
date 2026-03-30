@@ -140,6 +140,8 @@ ABSL_FLAG(std::string, unk_surface, kDefaultTrainerSpec.unk_surface(),
 ABSL_FLAG(bool, train_extremely_large_corpus,
           kDefaultTrainerSpec.train_extremely_large_corpus(),
           "Increase bit depth for unigram tokenization.");
+ABSL_FLAG(bool, fast_bpe, false,
+          "Use nlcodec's fast BPE trainer (~8x faster). Only for --model_type=bpe.");
 ABSL_FLAG(int32, random_seed, -1, "Seed value for random generator.");
 
 int main(int argc, char *argv[]) {
