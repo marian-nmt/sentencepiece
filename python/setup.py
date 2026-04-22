@@ -102,15 +102,15 @@ else:
   cmdclass = {'build_ext': build_ext}
 
 setup(
-    name='sentencepiece',
+    name='marian-sentencepiece',
     author='Taku Kudo',
     author_email='taku@google.com',
-    description='SentencePiece python wrapper',
+    description="Marian's fork of the SentencePiece python wrapper",
     long_description=long_description(),
     long_description_content_type='text/markdown',
     version=version(),
     package_dir={'': 'src'},
-    url='https://github.com/google/sentencepiece',
+    url='https://github.com/marian-nmt/sentencepiece',
     license='Apache',
     platforms='Unix',
     py_modules=[

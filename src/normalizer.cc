@@ -330,11 +330,16 @@ util::Status Normalizer::DecodePrecompiledCharsMap(
 PrefixMatcher::PrefixMatcher(const std::set<absl::string_view> &dic) {
   if (dic.empty()) return;
   std::vector<const char *> key;
+  std::vector<size_t> lengths;
   key.reserve(dic.size());
-  for (const auto &it : dic) key.push_back(it.data());
+  lengths.reserve(dic.size());
+  for (const auto &it : dic) {
+    key.push_back(it.data());
+    lengths.push_back(it.size());
+  }
   trie_ = absl::make_unique<Darts::DoubleArray>();
-  CHECK_EQ(0, trie_->build(key.size(), const_cast<char **>(&key[0]), nullptr,
-                           nullptr));
+  CHECK_EQ(0, trie_->build(key.size(), const_cast<char **>(key.data()),
+                           const_cast<size_t *>(lengths.data()), nullptr));
 }
 
 int PrefixMatcher::PrefixMatch(absl::string_view w, bool *found) const {
