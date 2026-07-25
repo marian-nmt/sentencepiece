@@ -39,8 +39,6 @@ option(SPM_NLCODEC_BPE
 
 set(SPM_PROTOBUF_PROVIDER "internal" CACHE STRING "Provider of protobuf library")
 set_property(CACHE SPM_PROTOBUF_PROVIDER PROPERTY STRINGS "internal" "package")
-set(SPM_ABSL_PROVIDER "module" CACHE STRING "Provider of absl library")
-set_property(CACHE SPM_ABSL_PROVIDER PROPERTY STRINGS "module" "package")
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
@@ -187,31 +185,7 @@ if (SPM_DISABLE_EMBEDDED_DATA)
  install(FILES ${EMBEDDED_DATA_FILES} DESTINATION ${INSTALL_DATADIR})
 endif()
 
-if (SPM_ABSL_PROVIDER STREQUAL "module")
-  include(FetchContent)
-  FetchContent_Populate(abseil-cpp
-        GIT_REPOSITORY  https://github.com/abseil/abseil-cpp.git
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil-cpp
-        GIT_PROGRESS TRUE
-        GIT_TAG 20260526.0)
-  add_subdirectory(third_party/abseil-cpp)
-  if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl)
-    file(CREATE_LINK
-         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil-cpp/absl
-         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl
-         SYMBOLIC)
-  endif()
-elseif (SPM_ABSL_PROVIDER STREQUAL "package")
-  find_package(absl REQUIRED)
-  get_target_property(ABSL_INCLUDE_DIRS absl::base INTERFACE_INCLUDE_DIRECTORIES)
-  if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl)
-    file(CREATE_LINK
-         ${ABSL_INCLUDE_DIRS}/absl
-         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl
-         SYMBOLIC)
-  endif()
-  include_directories(${ABSL_INCLUDE_DIRS})
-endif()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl)
 
 if(SPM_ENABLE_BENCHMARK)
   include(FetchContent)

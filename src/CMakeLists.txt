@@ -12,16 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.!
 
-list(APPEND SPM_LIBS absl::status)
-list(APPEND SPM_LIBS absl::status_builder)
-list(APPEND SPM_LIBS absl::strings)
-list(APPEND SPM_LIBS absl::flags)
-list(APPEND SPM_LIBS absl::flags_parse)
-list(APPEND SPM_LIBS absl::log)
-list(APPEND SPM_LIBS absl::log_initialize)
-list(APPEND SPM_LIBS absl::check)
-list(APPEND SPM_LIBS absl::random_random)
-list(APPEND SPM_LIBS absl::time)
+set(SPM_FLAGS_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/absl/flags/flag.cc)
 
 if (SPM_PROTOBUF_PROVIDER STREQUAL "internal")
   set(SPM_PROTO_HDRS builtin_pb/sentencepiece.pb.h)
@@ -80,6 +72,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
 
 set(SPM_SRCS
+  ${SPM_FLAGS_SRCS}
   ${PROTOBUF_LITE_SRCS}
   ${SPM_PROTO_HDRS}
   ${SPM_PROTO_SRCS}
@@ -94,6 +87,7 @@ set(SPM_SRCS
   filesystem.h
   init.h
   sentencepiece_processor.h
+  sentencepiece_status.h
   word_model.h
   model_factory.h
   char_model.h

@@ -16,14 +16,12 @@
 #define SENTENCEPIECE_TRAINER_H_
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "sentencepiece_processor.h"
-#include "third_party/absl/status/status.h"
-#include "third_party/absl/strings/string_view.h"
-#include "third_party/absl/types/span.h"
 
 namespace sentencepiece {
 
@@ -56,7 +54,7 @@ class SentenceIterator {
   [[nodiscard]] virtual bool done() const = 0;
   virtual void Next() = 0;
   [[nodiscard]] virtual const std::string& value() const = 0;
-  virtual absl::Status status() const = 0;
+  virtual Status status() const = 0;
 };
 
 class SentencePieceTrainer {
@@ -64,48 +62,48 @@ class SentencePieceTrainer {
   // Trains SentencePiece model with `trainer_spec`.
   // Default `normalizer_spec` is used.
   // When `sentence_iterator` is passed, load sentences from the iterator.
-  static absl::Status Train(const TrainerSpec& trainer_spec,
-                            SentenceIterator* sentence_iterator = nullptr,
-                            std::string* serialized_model_proto = nullptr);
+  static Status Train(const TrainerSpec& trainer_spec,
+                      SentenceIterator* sentence_iterator = nullptr,
+                      std::string* serialized_model_proto = nullptr);
 
   // Trains SentencePiece model with `trainer_spec` and
   // `normalizer_spec`.
   // When `sentence_iterator` is passed, load sentences from the iterator.
-  static absl::Status Train(const TrainerSpec& trainer_spec,
-                            const NormalizerSpec& normalizer_spec,
-                            SentenceIterator* sentence_iterator = nullptr,
-                            std::string* serialized_model_proto = nullptr);
+  static Status Train(const TrainerSpec& trainer_spec,
+                      const NormalizerSpec& normalizer_spec,
+                      SentenceIterator* sentence_iterator = nullptr,
+                      std::string* serialized_model_proto = nullptr);
 
   // Trains SentencePiece model with `trainer_spec`, `normalizer_spec`
   // and `denormalizer_spec`.
   // When `sentence_iterator` is passed, load sentences from the iterator.
-  static absl::Status Train(const TrainerSpec& trainer_spec,
-                            const NormalizerSpec& normalizer_spec,
-                            const NormalizerSpec& denormalizer_spec,
-                            SentenceIterator* sentence_iterator = nullptr,
-                            std::string* serialized_model_proto = nullptr);
+  static Status Train(const TrainerSpec& trainer_spec,
+                      const NormalizerSpec& normalizer_spec,
+                      const NormalizerSpec& denormalizer_spec,
+                      SentenceIterator* sentence_iterator = nullptr,
+                      std::string* serialized_model_proto = nullptr);
   // Trains SentencePiece model with command-line string in `args`,
   // e.g.,
   // '--input=data --model_prefix=m --vocab_size=8192 model_type=unigram'
   // When `sentence_iterator` is passed, load sentences from the iterator.
-  static absl::Status Train(absl::string_view args,
-                            SentenceIterator* sentence_iterator = nullptr,
-                            std::string* serialized_model_proto = nullptr);
+  static Status Train(std::string_view args,
+                      SentenceIterator* sentence_iterator = nullptr,
+                      std::string* serialized_model_proto = nullptr);
 
   // Trains SentencePiece model with mapin `kwargs`.
   // e.g., {{"input", "data"}, {"model_prefix, "m"}, {"vocab_size", "8192"}...}
-  static absl::Status Train(
+  static Status Train(
       const std::unordered_map<std::string, std::string>& kwargs,
       SentenceIterator* sentence_iterator = nullptr,
       std::string* serialized_model_proto = nullptr);
 
   // The same as above, but passes the list of sentences.
-  static absl::Status Train(absl::string_view args,
-                            const std::vector<std::string>& sentences,
-                            std::string* serialized_model_proto = nullptr);
+  static Status Train(std::string_view args,
+                      const std::vector<std::string>& sentences,
+                      std::string* serialized_model_proto = nullptr);
 
   // The same as above, but passes the list of sentences.
-  static absl::Status Train(
+  static Status Train(
       const std::unordered_map<std::string, std::string>& kwargs,
       const std::vector<std::string>& sentences,
       std::string* serialized_model_proto = nullptr);
@@ -113,31 +111,30 @@ class SentencePieceTrainer {
   // Handy function to make a normalizer spec from the pre-compiled
   // normalization name. Do not use this method in production as it crashes
   // When `name` is invalid. Useful for unittesting.
-  static NormalizerSpec GetNormalizerSpec(absl::string_view name);
+  static NormalizerSpec GetNormalizerSpec(std::string_view name);
 
   // Populates necessary fields (precompiled_charmap) from
   // `NormalizerSpec::name` or `NormalizerSpec::normalization_rule_tsv`.
-  static absl::Status PopulateNormalizerSpec(NormalizerSpec* normalizer_spec,
-                                             bool is_denormalizer = false);
+    static Status PopulateNormalizerSpec(
+            NormalizerSpec* normalizer_spec, bool is_denormalizer = false);
 
   // Overrides `trainer_spec`, `normalizer_spec`, `denormalizer_spec` with the
   // std::unordered_map in `kargs`.
-  static absl::Status MergeSpecsFromArgs(
+  static Status MergeSpecsFromArgs(
       const std::unordered_map<std::string, std::string>& kwargs,
       TrainerSpec* trainer_spec, NormalizerSpec* normalizer_spec,
       NormalizerSpec* denormalizer_spec);
 
   // Overrides `trainer_spec`, `normalizer_spec`, `denormalizer_spec` with the
   // command line flags in `args`.
-  static absl::Status MergeSpecsFromArgs(absl::string_view args,
-                                         TrainerSpec* trainer_spec,
-                                         NormalizerSpec* normalizer_spec,
-                                         NormalizerSpec* denormalizer_spec);
+    static Status MergeSpecsFromArgs(
+            std::string_view args, TrainerSpec* trainer_spec,
+            NormalizerSpec* normalizer_spec, NormalizerSpec* denormalizer_spec);
 
   // Injects global pre-tokenizer that are applied in training time.
   // Pretokenizer is only used for extracting pieces.
   // TODO(taku): It would be better to inject per `trainer_spec`.
-  static absl::Status SetPretokenizerForTraining(
+  static Status SetPretokenizerForTraining(
       const pretokenizer::PretokenizerForTrainingInterface* pretokenizer);
 
   // Returns the current pretokenizer. if no pretokenizer is defined, returns
@@ -150,18 +147,16 @@ class SentencePieceTrainer {
   // with comma-separated values. `field_name` must not be a nested message.
   // The body of these functions are automatically generated with
   // data/gen_spec_parser.pl
-  static absl::Status SetProtoField(absl::string_view name,
-                                    absl::string_view value,
-                                    TrainerSpec* message);
+  static Status SetProtoField(std::string_view name,
+                              std::string_view value, TrainerSpec* message);
 
-  static absl::Status SetProtoField(absl::string_view name,
-                                    absl::string_view value,
-                                    NormalizerSpec* message);
+  static Status SetProtoField(std::string_view name,
+                              std::string_view value, NormalizerSpec* message);
 
   // Populates model type from string representation, e.g., "bpe".
   // Supported model: "unigram", "bpe", "word", "char".
-  static absl::Status PopulateModelTypeFromString(absl::string_view type,
-                                                  TrainerSpec* trainer_spec);
+    static Status PopulateModelTypeFromString(std::string_view type,
+                                                                                        TrainerSpec* trainer_spec);
 
  private:
   SentencePieceTrainer() {}
@@ -173,32 +168,32 @@ class SentencePieceNormalizer {
   SentencePieceNormalizer();
   virtual ~SentencePieceNormalizer();
 
-  virtual absl::Status Load(std::unique_ptr<ModelProto> model_proto);
-  virtual absl::Status Load(std::unique_ptr<NormalizerSpec> normalizer_spec);
+  virtual Status Load(std::unique_ptr<ModelProto> model_proto);
+  virtual Status Load(std::unique_ptr<NormalizerSpec> normalizer_spec);
 
-  virtual absl::Status Load(absl::string_view filename);
+  virtual Status Load(std::string_view filename);
 
-  virtual absl::Status LoadFromSerializedProto(absl::string_view serialized);
-  virtual absl::Status LoadFromSerializedNormalizerSpec(absl::string_view serialized);
+  virtual Status LoadFromSerializedProto(std::string_view serialized);
+  virtual Status LoadFromSerializedNormalizerSpec(std::string_view serialized);
 
-  virtual absl::Status LoadFromRuleTSV(absl::string_view filename);
+  virtual Status LoadFromRuleTSV(std::string_view filename);
 
-  virtual absl::Status LoadFromRuleName(absl::string_view name);
+  virtual Status LoadFromRuleName(std::string_view name);
 
-  virtual absl::Status LoadFromMap(
-      absl::Span<const std::pair<std::string, std::string>> norm_map);
+  virtual Status LoadFromMap(
+      const std::vector<std::pair<std::string, std::string>>& norm_map);
 
-  virtual absl::Status Decompile(
-      std::vector<std::pair<std::string, std::string>> *norm_map) const;
+  virtual Status Decompile(
+      std::vector<std::pair<std::string, std::string>>* norm_map) const;
 
-  virtual absl::Status Normalize(absl::string_view input,
-                                 std::string* normalized) const;
+  virtual Status Normalize(std::string_view input,
+                           std::string* normalized) const;
 
-  virtual absl::Status Normalize(absl::string_view input,
-                                 std::string* normalized,
-                                 std::vector<size_t>* norm_to_orig) const;
+  virtual Status Normalize(std::string_view input,
+                           std::string* normalized,
+                           std::vector<size_t>* norm_to_orig) const;
 
-  [[nodiscard]] virtual std::string Normalize(absl::string_view input) const;
+  [[nodiscard]] virtual std::string Normalize(std::string_view input) const;
 
   [[nodiscard]] virtual NormalizerSpec* mutable_normalizer_spec();
 
@@ -212,12 +207,12 @@ class SentencePieceNormalizer {
 };
 
 // Converts the utf8 byte spans into Unicode char span.
-void ConvertToUnicodeAlignment(absl::string_view orig, absl::string_view norm,
+void ConvertToUnicodeAlignment(std::string_view orig, std::string_view norm,
                                std::vector<size_t>* norm_to_orig);
 
 // Sets data dir including the pre-compiled normalization data.
 // The implementation is found in util.cc
-void SetDataDir(absl::string_view data_dir);
+void SetDataDir(std::string_view data_dir);
 
 }  // namespace sentencepiece
 

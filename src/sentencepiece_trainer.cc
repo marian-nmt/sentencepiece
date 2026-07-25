@@ -450,7 +450,7 @@ absl::Status SentencePieceNormalizer::LoadFromRuleName(absl::string_view name) {
 }
 
 absl::Status SentencePieceNormalizer::LoadFromMap(
-    absl::Span<const std::pair<std::string, std::string>> norm_map) {
+  const std::vector<std::pair<std::string, std::string>>& norm_map) {
   normalizer::Builder::CharsMap chars_map;
   for (const auto &[src, trg] : norm_map) {
     if (!string_util::IsStructurallyValid(src)) {

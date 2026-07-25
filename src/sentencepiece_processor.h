@@ -24,13 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include "third_party/absl/strings/string_view.h"
-#include "third_party/absl/types/span.h"
-namespace absl {
-using std::string_view;
-}  // namespace absl
-
-#include "third_party/absl/status/status.h"
+#include "sentencepiece_status.h"
 
 namespace sentencepiece {
 
@@ -98,7 +92,7 @@ namespace normalizer {
 class Normalizer;
 }  // namespace normalizer
 
-// Default ThreadPool implemented using Abseil functionality.
+// Default ThreadPool implemented using standard C++ synchronization.
 // If you want to use a custom implementation, please inherit from it.
 //
 // Note: This ThreadPool does not support recursive calls. Scheduling a new task
@@ -136,8 +130,8 @@ class ThreadPool {
 // auto status = sentencepiece::RunBatch(inputs.size(), [&](size_t i) {
 //   return spm.Encode(ins[i], &outs[i]);
 // }, pool);
-absl::Status RunBatch(size_t total_tasks,
-                      std::function<absl::Status(size_t index)> task_func,
+Status RunBatch(size_t total_tasks,
+                      std::function<Status(size_t index)> task_func,
                       ThreadPool& pool);
 
 namespace util {
@@ -239,32 +233,32 @@ class SentencePieceProcessor {
 
   // Loads model from `filename`.
   // Returns false if `filename` cannot be loaded.
-  virtual absl::Status Load(absl::string_view filename);
+  virtual Status Load(std::string_view filename);
 
   // Loads model from `filename`.
   // Crash if `filename` cannot be loaded.
-  virtual void LoadOrDie(absl::string_view filename);
+  virtual void LoadOrDie(std::string_view filename);
 
   // Loads model from `model_proto`.
   // `model_proto` is copied.
-  virtual absl::Status Load(const ModelProto& model_proto);
+  virtual Status Load(const ModelProto& model_proto);
 
   // Loads model from `model_proto`.
   // `model_proto` is moved.
-  virtual absl::Status Load(std::unique_ptr<ModelProto> model_proto);
+  virtual Status Load(std::unique_ptr<ModelProto> model_proto);
 
   // Loads model from `serialized`, which is a string-serialized model proto.
   // Useful to load the model from a platform independent blob object.
-  virtual absl::Status LoadFromSerializedProto(absl::string_view serialized);
+  virtual Status LoadFromSerializedProto(std::string_view serialized);
 
   // Returns the status. Encode/Decode methods are valid when status is OK.
-  virtual absl::Status status() const;
+  virtual Status status() const;
 
   // Sets encode extra_option sequence.
-  virtual absl::Status SetEncodeExtraOptions(absl::string_view extra_option);
+  virtual Status SetEncodeExtraOptions(std::string_view extra_option);
 
   // Sets decode extra_option sequence.
-  virtual absl::Status SetDecodeExtraOptions(absl::string_view extra_option);
+  virtual Status SetDecodeExtraOptions(std::string_view extra_option);
 
   //////////////////////////////////////////////////////////////
   // Vocabulary restriction.
@@ -273,86 +267,50 @@ class SentencePieceProcessor {
 
   // Restricts the vocabulary set.
   // The input sentences are encoded into the tokens in `valid_vocab`.
-  [[deprecated(
-      "WARNING: This method is deprecated. "
-      "It mutates the underlying model and may cause race conditions if the "
-      "model is shared (using shared_ptr<>) with other users.")]]
-  virtual absl::Status SetVocabulary(
-      const std::vector<absl::string_view>& valid_vocab);
+  virtual Status SetVocabulary(
+      const std::vector<std::string_view>& valid_vocab);
 
   // Reverts the vocabulary restriction.
-  [[deprecated(
-      "WARNING: This method is deprecated. "
-      "It mutates the underlying model and may cause race conditions if the "
-      "model is shared (using shared_ptr<>) with other users.")]]
-  virtual absl::Status ResetVocabulary();
+  virtual Status ResetVocabulary();
 
   // Loads the valid vocabulary set from `filename` in TSV format.
   // Format:  <token> <tab> <freq>.
   // Any token with frequency < threshold will be treated as OOV.
-  [[deprecated("WARNING: LoadVocabulary is deprecated and will be removed.")]]
-  virtual absl::Status LoadVocabulary(absl::string_view filename,
-                                      int threshold);
+  virtual Status LoadVocabulary(std::string_view filename, int threshold);
 
   //////////////////////////////////////////////////////////////
   // Simple Encode and Decode API.
   //
   // Given a UTF8 input, encodes it into a sequence of sentence pieces.
-  virtual absl::Status Encode(absl::string_view input,
-                              std::vector<std::string>* pieces) const;
+  virtual Status Encode(std::string_view input,
+                        std::vector<std::string>* pieces) const;
 
   // Given a UTF8 input, encodes it into a sequence of ids.
-  virtual absl::Status Encode(absl::string_view input,
-                              std::vector<int>* ids) const;
+  virtual Status Encode(std::string_view input, std::vector<int>* ids) const;
 
   // Given a sequence of pieces, decodes it into a detokenized output.
-  virtual absl::Status Decode(absl::Span<const std::string> pieces,
-                              std::string* detokenized) const;
+  virtual Status Decode(const std::vector<std::string>& pieces,
+                        std::string* detokenized) const;
 
   // Given a sequence of pieces, decodes it into a detokenized output.
-  virtual absl::Status Decode(absl::Span<const absl::string_view> pieces,
-                              std::string* detokenized) const;
+  virtual Status Decode(const std::vector<std::string_view>& pieces,
+                        std::string* detokenized) const;
 
   // Given a sequence of ids, decodes it into a detokenized output.
-  virtual absl::Status Decode(absl::Span<const int> ids,
-                              std::string* detokenized) const;
-
-  // Backward compatibility overloads for std::vector.
-  [[deprecated(
-      "WARNING: Decode with std::vector<> input is deprecated and will be "
-      "removed.")]]
-  virtual absl::Status Decode(const std::vector<std::string>& pieces,
-                              std::string* detokenized) const {
-    return Decode(absl::MakeConstSpan(pieces), detokenized);
-  }
-
-  [[deprecated(
-      "WARNING: Decode with std::vector<> input is deprecated and will be "
-      "removed.")]]
-  virtual absl::Status Decode(const std::vector<absl::string_view>& pieces,
-                              std::string* detokenized) const {
-    return Decode(absl::MakeConstSpan(pieces), detokenized);
-  }
-
-  [[deprecated(
-      "WARNING: Decode with std::vector<> input is deprecated and will be "
-      "removed.")]]
-  virtual absl::Status Decode(const std::vector<int>& ids,
-                              std::string* detokenized) const {
-    return Decode(absl::MakeConstSpan(ids), detokenized);
-  }
+  virtual Status Decode(const std::vector<int>& ids,
+                        std::string* detokenized) const;
 
   //////////////////////////////////////////////////////////////
   // NBest API.
   //
   // Same as Encode, but returns nbest results.
-  virtual absl::Status NBestEncode(
-      absl::string_view input, int nbest_size,
+  virtual Status NBestEncode(
+      std::string_view input, int nbest_size,
       std::vector<std::vector<std::string>>* pieces) const;
 
   // Same as Encode, but returns nbest results.
-  virtual absl::Status NBestEncode(absl::string_view input, int nbest_size,
-                                   std::vector<std::vector<int>>* ids) const;
+  virtual Status NBestEncode(std::string_view input, int nbest_size,
+                             std::vector<std::vector<int>>* ids) const;
 
   //////////////////////////////////////////////////////////////
   // Sampling API.
@@ -374,13 +332,13 @@ class SentencePieceProcessor {
   // `alpha`: The dropout probability `p` of bpe merge operations in
   // https://arxiv.org/abs/1910.13267 Nbest-based sampling is not supported so
   // nbest_size parameter is ignored in BPE.
-  virtual absl::Status SampleEncode(absl::string_view input, int nbest_size,
-                                    float alpha,
-                                    std::vector<std::string>* pieces) const;
+  virtual Status SampleEncode(std::string_view input, int nbest_size,
+                              float alpha,
+                              std::vector<std::string>* pieces) const;
 
   // Same as above, but returns a sequence of ids.
-  virtual absl::Status SampleEncode(absl::string_view input, int nbest_size,
-                                    float alpha, std::vector<int>* ids) const;
+  virtual Status SampleEncode(std::string_view input, int nbest_size,
+                              float alpha, std::vector<int>* ids) const;
 
   //////////////////////////////////////////////////////////////
   // SampleEncodeAndScore API.
@@ -397,18 +355,14 @@ class SentencePieceProcessor {
   // `include_best`: If `include_best` is true, the best tokenisation is always
   // included in the sample, and the remaining elements are sampled excluding
   // the best.
-  [[deprecated(
-      "WARNING: SampleEncodeAndScore is deprecated and will be removed.")]]
-  virtual absl::Status SampleEncodeAndScore(
-      absl::string_view input, int num_samples, float alpha, bool wor,
+  virtual Status SampleEncodeAndScore(
+      std::string_view input, int num_samples, float alpha, bool wor,
       bool include_best,
       std::vector<std::pair<std::vector<std::string>, float>>* pieces) const;
 
   // Same as above, but returns a sequence of ids.
-  [[deprecated(
-      "WARNING: SampleEncodeAndScore is deprecated and will be removed.")]]
-  virtual absl::Status SampleEncodeAndScore(
-      absl::string_view input, int num_samples, float alpha, bool wor,
+  virtual Status SampleEncodeAndScore(
+      std::string_view input, int num_samples, float alpha, bool wor,
       bool include_best,
       std::vector<std::pair<std::vector<int>, float>>* ids) const;
 
@@ -417,9 +371,8 @@ class SentencePieceProcessor {
   //
   // This only available in model_type=unigram.
   // Calculate entropy of possible tokenisations
-  [[deprecated("WARNING: CalculateEntropy is deprecated and will be removed.")]]
-  virtual absl::Status CalculateEntropy(absl::string_view input, float alpha,
-                                        float* entropy) const;
+  virtual Status CalculateEntropy(std::string_view input, float alpha,
+                                  float* entropy) const;
 
   //////////////////////////////////////////////////////////////
   // Advanced API returning SentencePieceText, which manages
@@ -434,55 +387,24 @@ class SentencePieceProcessor {
   // ImmutableSentencePieceText spt;
   // Encode("hello", spt.mutable_proto()).IgnoreError();
   // std::cout << spt.pieces_size() << std::endl;
-  virtual absl::Status Encode(absl::string_view input,
-                              SentencePieceText* spt) const;
+  virtual Status Encode(std::string_view input, SentencePieceText* spt) const;
 
-  virtual absl::Status NBestEncode(absl::string_view input, int nbest_size,
-                                   NBestSentencePieceText* nbest_spt) const;
+  virtual Status NBestEncode(std::string_view input, int nbest_size,
+                             NBestSentencePieceText* nbest_spt) const;
 
-  virtual absl::Status SampleEncode(absl::string_view input, int nbest_size,
-                                    float alpha, SentencePieceText* spt) const;
+  virtual Status SampleEncode(std::string_view input, int nbest_size,
+                              float alpha, SentencePieceText* spt) const;
 
-  [[deprecated(
-      "WARNING: SampleEncodeAndScore is deprecated and will be removed.")]]
-  virtual absl::Status SampleEncodeAndScore(
-      absl::string_view input, int num_samples, float alpha, bool wor,
+  virtual Status SampleEncodeAndScore(
+      std::string_view input, int num_samples, float alpha, bool wor,
       bool include_best, NBestSentencePieceText* samples_spt) const;
 
-  // DEPRECATED: Remove this API and use absl::Span<const absl::string_view>
-  virtual absl::Status Decode(absl::Span<const std::string> pieces,
-                              SentencePieceText* spt) const;
-
-  virtual absl::Status Decode(absl::Span<const absl::string_view> pieces,
-                              SentencePieceText* spt) const;
-
-  virtual absl::Status Decode(absl::Span<const int> ids,
-                              SentencePieceText* spt) const;
-
-  // Backward compatibility overloads for std::vector.
-  [[deprecated(
-      "WARNING: Decode with std::vector<> input is deprecated and will be "
-      "removed.")]]
-  virtual absl::Status Decode(const std::vector<std::string>& pieces,
-                              SentencePieceText* spt) const {
-    return Decode(absl::MakeConstSpan(pieces), spt);
-  }
-
-  [[deprecated(
-      "WARNING: Decode with std::vector<> input is deprecated and will be "
-      "removed.")]]
-  virtual absl::Status Decode(const std::vector<absl::string_view>& pieces,
-                              SentencePieceText* spt) const {
-    return Decode(absl::MakeConstSpan(pieces), spt);
-  }
-
-  [[deprecated(
-      "WARNING: Decode with std::vector<> input is deprecated and will be "
-      "removed.")]]
-  virtual absl::Status Decode(const std::vector<int>& ids,
-                              SentencePieceText* spt) const {
-    return Decode(absl::MakeConstSpan(ids), spt);
-  }
+  virtual Status Decode(const std::vector<std::string>& pieces,
+                        SentencePieceText* spt) const;
+  virtual Status Decode(const std::vector<std::string_view>& pieces,
+                        SentencePieceText* spt) const;
+  virtual Status Decode(const std::vector<int>& ids,
+                        SentencePieceText* spt) const;
 
   //////////////////////////////////////////////////////////////
   // API methods for encoding sequences in parallel.
@@ -493,15 +415,15 @@ class SentencePieceProcessor {
 
   // WARNING: ParallelEncode with SentencePieceText * inputs currently does not
   // copy the UNK surface form correctly. Use at your own risk!
-  virtual absl::Status ParallelEncode(absl::string_view input, int chunk_len,
-                                      ThreadPool& thread_pool,
-                                      std::vector<std::string>* pieces) const;
-  virtual absl::Status ParallelEncode(absl::string_view input, int chunk_len,
-                                      ThreadPool& thread_pool,
-                                      std::vector<int>* ids) const;
-  virtual absl::Status ParallelEncode(absl::string_view input, int chunk_len,
-                                      ThreadPool& thread_pool,
-                                      SentencePieceText* spt) const;
+  virtual Status ParallelEncode(std::string_view input, int chunk_len,
+                                ThreadPool& thread_pool,
+                                std::vector<std::string>* pieces) const;
+  virtual Status ParallelEncode(std::string_view input, int chunk_len,
+                                ThreadPool& thread_pool,
+                                std::vector<int>* ids) const;
+  virtual Status ParallelEncode(std::string_view input, int chunk_len,
+                                ThreadPool& thread_pool,
+                                SentencePieceText* spt) const;
 
 #define DEFINE_SPP_DIRECT_FUNC_IMPL(FuncName, OutType, ...) \
   OutType output;                                           \
@@ -522,41 +444,41 @@ class SentencePieceProcessor {
   // Handy methods that return the result directly.
   // These functions ignore internal errors.
   [[nodiscard]] virtual std::vector<std::string> EncodeAsPieces(
-      absl::string_view input) const {
+      std::string_view input) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(Encode, std::vector<std::string>, input);
   }
 
   [[nodiscard]] virtual std::vector<int> EncodeAsIds(
-      absl::string_view input) const {
+      std::string_view input) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(Encode, std::vector<int>, input);
   }
 
   [[nodiscard]] virtual std::vector<std::vector<std::string>>
-  NBestEncodeAsPieces(absl::string_view input, int nbest_size) const {
+  NBestEncodeAsPieces(std::string_view input, int nbest_size) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(
         NBestEncode, std::vector<std::vector<std::string>>, input, nbest_size);
   }
 
   [[nodiscard]] virtual std::vector<std::vector<int>> NBestEncodeAsIds(
-      absl::string_view input, int nbest_size) const {
+      std::string_view input, int nbest_size) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(NBestEncode, std::vector<std::vector<int>>,
                                 input, nbest_size);
   }
 
   [[nodiscard]] virtual std::vector<std::string> SampleEncodeAsPieces(
-      absl::string_view input, int nbest_size, float alpha) const {
+      std::string_view input, int nbest_size, float alpha) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(SampleEncode, std::vector<std::string>, input,
                                 nbest_size, alpha);
   }
 
   [[nodiscard]] virtual std::vector<int> SampleEncodeAsIds(
-      absl::string_view input, int nbest_size, float alpha) const {
+      std::string_view input, int nbest_size, float alpha) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(SampleEncode, std::vector<int>, input,
                                 nbest_size, alpha);
   }
 
   [[nodiscard]] virtual std::vector<std::pair<std::vector<std::string>, float>>
-  SampleEncodeAndScoreAsPieces(absl::string_view input, int num_samples,
+  SampleEncodeAndScoreAsPieces(std::string_view input, int num_samples,
                                float alpha, bool wor, bool include_best) const {
     using _T = std::vector<std::pair<std::vector<std::string>, float>>;
     DEFINE_SPP_DIRECT_FUNC_IMPL(SampleEncodeAndScore, _T, input, num_samples,
@@ -564,7 +486,7 @@ class SentencePieceProcessor {
   }
 
   [[nodiscard]] virtual std::vector<std::pair<std::vector<int>, float>>
-  SampleEncodeAndScoreAsIds(absl::string_view input, int num_samples,
+  SampleEncodeAndScoreAsIds(std::string_view input, int num_samples,
                             float alpha, bool wor, bool include_best) const {
     using _T = std::vector<std::pair<std::vector<int>, float>>;
     DEFINE_SPP_DIRECT_FUNC_IMPL(SampleEncodeAndScore, _T, input, num_samples,
@@ -572,12 +494,12 @@ class SentencePieceProcessor {
   }
 
   virtual std::vector<std::string> ParallelEncodeAsPieces(
-      absl::string_view input, int chunk_len, ThreadPool& therad_pool) const {
+      std::string_view input, int chunk_len, ThreadPool& therad_pool) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(ParallelEncode, std::vector<std::string>, input,
                                 chunk_len, therad_pool);
   }
 
-  virtual std::vector<int> ParallelEncodeAsIds(absl::string_view input,
+  virtual std::vector<int> ParallelEncodeAsIds(std::string_view input,
                                                int chunk_len,
                                                ThreadPool& therad_pool) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(ParallelEncode, std::vector<int>, input,
@@ -591,7 +513,7 @@ class SentencePieceProcessor {
   }
 
   [[nodiscard]] virtual std::string DecodePieces(
-      const std::vector<absl::string_view>& pieces) const {
+      const std::vector<std::string_view>& pieces) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(Decode, std::string, pieces);
   }
 
@@ -600,7 +522,7 @@ class SentencePieceProcessor {
     DEFINE_SPP_DIRECT_FUNC_IMPL(Decode, std::string, ids);
   }
 
-  [[nodiscard]] virtual float CalculateEntropy(absl::string_view text,
+  [[nodiscard]] virtual float CalculateEntropy(std::string_view text,
                                                float alpha) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(CalculateEntropy, float, text, alpha);
   }
@@ -611,24 +533,24 @@ class SentencePieceProcessor {
   // In python module, we can get access to the full Proto after
   // deserialzing the returned byte sequence.
   [[nodiscard]] virtual util::bytes EncodeAsSerializedProto(
-      absl::string_view input) const {
+      std::string_view input) const {
     DEFINE_SPP_SERIALIZED_PROTO_IMPL(Encode, ImmutableSentencePieceText, input);
   }
 
   [[nodiscard]] virtual util::bytes SampleEncodeAsSerializedProto(
-      absl::string_view input, int nbest_size, float alpha) const {
+      std::string_view input, int nbest_size, float alpha) const {
     DEFINE_SPP_SERIALIZED_PROTO_IMPL(SampleEncode, ImmutableSentencePieceText,
                                      input, nbest_size, alpha);
   }
 
   [[nodiscard]] virtual util::bytes NBestEncodeAsSerializedProto(
-      absl::string_view input, int nbest_size) const {
+      std::string_view input, int nbest_size) const {
     DEFINE_SPP_SERIALIZED_PROTO_IMPL(
         NBestEncode, ImmutableNBestSentencePieceText, input, nbest_size);
   }
 
   [[nodiscard]] virtual util::bytes SampleEncodeAndScoreAsSerializedProto(
-      absl::string_view input, int num_samples, float alpha, bool wor,
+      std::string_view input, int num_samples, float alpha, bool wor,
       bool include_best) const {
     DEFINE_SPP_SERIALIZED_PROTO_IMPL(SampleEncodeAndScore,
                                      ImmutableNBestSentencePieceText, input,
@@ -636,7 +558,7 @@ class SentencePieceProcessor {
   }
 
   virtual util::bytes ParallelEncodeAsSerializedProto(
-      absl::string_view input, int chunk_len, ThreadPool& thread_pool) const {
+      std::string_view input, int chunk_len, ThreadPool& thread_pool) const {
     DEFINE_SPP_SERIALIZED_PROTO_IMPL(ParallelEncode, ImmutableSentencePieceText,
                                      input, chunk_len, thread_pool);
   }
@@ -649,7 +571,7 @@ class SentencePieceProcessor {
   }
 
   [[nodiscard]] virtual util::bytes DecodePiecesAsSerializedProto(
-      const std::vector<absl::string_view>& pieces) const {
+      const std::vector<std::string_view>& pieces) const {
     DEFINE_SPP_SERIALIZED_PROTO_IMPL(Decode, ImmutableSentencePieceText,
                                      pieces);
   }
@@ -662,33 +584,25 @@ class SentencePieceProcessor {
   //////////////////////////////////////////////////////////////
   // ImmutableProto API.
   [[nodiscard]] virtual ImmutableSentencePieceText EncodeAsImmutableProto(
-      absl::string_view input) const {
+      std::string_view input) const {
     DEFINE_SPP_IMMUTABLE_PROTO_IMPL(Encode, ImmutableSentencePieceText, input);
   }
 
-  [[nodiscard]] [[deprecated(
-      "WARNING: SampleEncodeAsImmutableProto is deprecated and will be "
-      "removed.")]]
-  virtual ImmutableSentencePieceText SampleEncodeAsImmutableProto(
-      absl::string_view input, int nbest_size, float alpha) const {
+  [[nodiscard]] virtual ImmutableSentencePieceText SampleEncodeAsImmutableProto(
+      std::string_view input, int nbest_size, float alpha) const {
     DEFINE_SPP_IMMUTABLE_PROTO_IMPL(SampleEncode, ImmutableSentencePieceText,
                                     input, nbest_size, alpha);
   }
 
-  [[nodiscard]] [[deprecated(
-      "WARNING: NBestEncodeAsImmutableProto is deprecated and will be "
-      "removed.")]]
-  virtual ImmutableNBestSentencePieceText NBestEncodeAsImmutableProto(
-      absl::string_view input, int nbest_size) const {
+  [[nodiscard]] virtual ImmutableNBestSentencePieceText NBestEncodeAsImmutableProto(
+      std::string_view input, int nbest_size) const {
     DEFINE_SPP_IMMUTABLE_PROTO_IMPL(
         NBestEncode, ImmutableNBestSentencePieceText, input, nbest_size);
   }
 
-  [[nodiscard]] [[deprecated(
-      "WARNING: SampleEncodeAndScoreAsImmutableProto is deprecated and will be "
-      "removed.")]]
-  virtual ImmutableNBestSentencePieceText SampleEncodeAndScoreAsImmutableProto(
-      absl::string_view input, int num_samples, float alpha, bool wor,
+  [[nodiscard]] virtual ImmutableNBestSentencePieceText
+  SampleEncodeAndScoreAsImmutableProto(
+      std::string_view input, int num_samples, float alpha, bool wor,
       bool include_best) const {
     DEFINE_SPP_IMMUTABLE_PROTO_IMPL(SampleEncodeAndScore,
                                     ImmutableNBestSentencePieceText, input,
@@ -696,25 +610,19 @@ class SentencePieceProcessor {
   }
 
   virtual ImmutableSentencePieceText ParallelEncodeAsImmutableProto(
-      absl::string_view input, int chunk_len, ThreadPool& thread_pool) const {
+      std::string_view input, int chunk_len, ThreadPool& thread_pool) const {
     DEFINE_SPP_IMMUTABLE_PROTO_IMPL(ParallelEncode, ImmutableSentencePieceText,
                                     input, chunk_len, thread_pool);
   }
 
   // TODO(taku): Remove this API and use std::vector<std::string_view>
-  [[nodiscard]] [[deprecated(
-      "WARNING: DecodePiecesAsImmutableProto is deprecated and will be "
-      "removed.")]]
-  virtual ImmutableSentencePieceText DecodePiecesAsImmutableProto(
+  [[nodiscard]] virtual ImmutableSentencePieceText DecodePiecesAsImmutableProto(
       const std::vector<std::string>& pieces) const {
     DEFINE_SPP_IMMUTABLE_PROTO_IMPL(Decode, ImmutableSentencePieceText, pieces);
   }
 
-  [[nodiscard]] [[deprecated(
-      "WARNING: DecodePiecesAsImmutableProto is deprecated and will be "
-      "removed.")]]
-  virtual ImmutableSentencePieceText DecodePiecesAsImmutableProto(
-      const std::vector<absl::string_view>& pieces) const {
+  [[nodiscard]] virtual ImmutableSentencePieceText DecodePiecesAsImmutableProto(
+      const std::vector<std::string_view>& pieces) const {
     DEFINE_SPP_IMMUTABLE_PROTO_IMPL(Decode, ImmutableSentencePieceText, pieces);
   }
 
@@ -731,16 +639,16 @@ class SentencePieceProcessor {
   // Normalization methods.
 
   // Normalize `input`.
-  virtual absl::Status Normalize(absl::string_view input,
-                                 std::string* normalized) const;
+  virtual Status Normalize(std::string_view input,
+                           std::string* normalized) const;
 
   // Normalize `input`. Stores the utf8-byte offset from
   // the normalized string to the original input.
-  virtual absl::Status Normalize(absl::string_view input,
-                                 std::string* normalized,
-                                 std::vector<size_t>* norm_to_orig) const;
+  virtual Status Normalize(std::string_view input,
+                           std::string* normalized,
+                           std::vector<size_t>* norm_to_orig) const;
 
-  [[nodiscard]] virtual std::string Normalize(absl::string_view input) const;
+  [[nodiscard]] virtual std::string Normalize(std::string_view input) const;
 
   //////////////////////////////////////////////////////////////
   // Vocabulary management methods.
@@ -751,7 +659,7 @@ class SentencePieceProcessor {
 
   // Returns the vocab id of `piece`.
   // Returns UNK(0) if `piece` is unknown.
-  [[nodiscard]] virtual int PieceToId(absl::string_view piece) const;
+  [[nodiscard]] virtual int PieceToId(std::string_view piece) const;
 
   // Returns the string representation of vocab with `id`.
   [[nodiscard]] virtual const std::string& IdToPiece(int id) const;
@@ -822,44 +730,40 @@ class SentencePieceProcessor {
   // Returns mutable normalizer_spec.
   // Updating the intenral normalization during the encoding/decoding are not
   // recommended and may result in unexpected behavior. Use at your own risk.
-  [[nodiscard]] [[deprecated(
-      "WARNING: This method is deprecated. "
-      "It mutates the underlying model and may cause race conditions if the "
-      "model is shared (using shared_ptr<>) with other users.")]]
-  NormalizerSpec* mutable_normalizer_spec() const;
+  [[nodiscard]] NormalizerSpec* mutable_normalizer_spec() const;
 
  private:
   enum ExtraOption { REVERSE, BOS, EOS, UNK_PIECE };
 
-  absl::Status ParseExtraOptions(absl::string_view extra_option,
-                                 std::vector<ExtraOption>* extra_options) const;
+  Status ParseExtraOptions(std::string_view extra_option,
+                           std::vector<ExtraOption>* extra_options) const;
 
   template <typename T>
-  absl::Status ApplyExtraOptions(absl::Span<const ExtraOption> extra_options,
-                                 T* output) const;
+  Status ApplyExtraOptions(const std::vector<ExtraOption>& extra_options,
+                           T* output) const;
 
   template <typename T>
-  absl::Status EncodeOptimized(absl::string_view input,
-                               std::vector<T>* output) const;
+  Status EncodeOptimized(std::string_view input,
+                         std::vector<T>* output) const;
 
   template <typename T>
-  absl::Status DecodeOptimized(absl::Span<const T> input,
-                               std::string* detokenized) const;
+  Status DecodeOptimized(const T* input, size_t input_size,
+                         std::string* detokenized) const;
 
   bool HasUnkPieceOption() const;
 
-  absl::Status PopulateSentencePieceText(
-      absl::string_view input, absl::string_view normalized,
-      absl::Span<const size_t> norm_to_orig,
-      const std::vector<std::pair<absl::string_view, int>>& result,
+  Status PopulateSentencePieceText(
+      std::string_view input, std::string_view normalized,
+      const size_t* norm_to_orig, size_t norm_to_orig_size,
+      const std::vector<std::pair<std::string_view, int>>& result,
       SentencePieceText* spt, bool skip_surface = false,
       size_t input_start_offset = 0) const;
 
-  absl::Status ParallelEncodeInternal(absl::string_view input, size_t chunk_len,
-                                      ThreadPool& thread_pool,
-                                      std::vector<std::string>* pieces,
-                                      std::vector<int>* ids,
-                                      SentencePieceText* spt) const;
+  Status ParallelEncodeInternal(std::string_view input, size_t chunk_len,
+                                ThreadPool& thread_pool,
+                                std::vector<std::string>* pieces,
+                                std::vector<int>* ids,
+                                SentencePieceText* spt) const;
 
   std::unique_ptr<ModelInterface> model_;
   std::unique_ptr<normalizer::Normalizer> normalizer_;
@@ -903,14 +807,14 @@ namespace io {
 // Loads `model_proto` from `filename`.
 // We can instantiate SentencePieceProcessor as follows:
 //
-//  auto model_proto = absl::make_unique<ModelProto>();
+//  auto model_proto = std::make_unique<ModelProto>();
 //  io::LoadModelProto("//path/spm.model", model_proto.get());
 //  SentencePieceProcessor sp;
 //  CHECK_OK(sp.Load(std::move(model_proto)));
-absl::Status LoadModelProto(absl::string_view, ModelProto* model_proto);
+Status LoadModelProto(std::string_view, ModelProto* model_proto);
 
 // Saves `model_proto` as `filename`.
-absl::Status SaveModelProto(absl::string_view, const ModelProto& model_proto);
+Status SaveModelProto(std::string_view, const ModelProto& model_proto);
 }  // namespace io
 }  // namespace sentencepiece
 #endif  // SENTENCEPIECE_PROCESSOR_H_
