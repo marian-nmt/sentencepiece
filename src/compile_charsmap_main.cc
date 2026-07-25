@@ -61,10 +61,8 @@ std::string ToHexUInt64Array(
         buf[i] = static_cast<unsigned char>(begin[i]);
       }
       begin += sizeof(n);
-      os << "0x" << std::setw(2 * sizeof(n)) << n << ", ";
-      if (++num % 8 == 0) {
-        os << "\n";
-      }
+      os << "0x" << std::setw(2 * sizeof(n)) << n << ',';
+      os << (++num % 8 == 0 ? "\n" : " ");
     }
   }
 
@@ -175,7 +173,9 @@ int main(int argc, char** argv) {
                    {"nfd", Builder::BuildNFDMap},
                    {"nfkd_cf", Builder::BuildNFKD_CFMap},
                    {"nfc_cf", Builder::BuildNFC_CFMap},
-                   {"nfd_cf", Builder::BuildNFD_CFMap}};
+                   {"nfd_cf", Builder::BuildNFD_CFMap},
+                   {"case_uncaser", Builder::BuildUncaserMap},
+                   {"case_recaser", Builder::BuildRecaserMap}};
 
   std::vector<std::pair<std::string, std::string>> data;
   for (const auto& [name, func] : kRuleList) {

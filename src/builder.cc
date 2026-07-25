@@ -35,11 +35,13 @@
 #include <unicode/normlzr.h>
 #include <unicode/numfmt.h>
 #include <unicode/rbnf.h>
+#include <unicode/uchar.h>
 #include <unicode/utypes.h>
 #endif  // ENABLE_NFKC_COMPILE
 
 #include <set>
 
+#include "case_encoder.h"
 #include "normalizer.h"
 #include "third_party/darts_clone/darts.h"
 #include "util.h"
@@ -590,6 +592,79 @@ absl::Status Builder::BuildNmtNFKC_CFMap(CharsMap* chars_map) {
   LOG(ERROR) << kCompileError;
 #endif
 
+  return absl::OkStatus();
+}
+
+// static
+absl::Status Builder::BuildUncaserMap(CharsMap* chars_map) {
+  RET_CHECK(chars_map);
+#ifdef ENABLE_NFKC_COMPILE
+  constexpr char32_t kUppercaseMarker =
+      static_cast<char32_t>(kCaseUppercase);
+  constexpr char32_t kPunctuationMarker =
+      static_cast<char32_t>(kCasePunctuation);
+
+  for (char32_t codepoint = 1; codepoint <= kMaxUnicode; ++codepoint) {
+    if (!U_IS_UNICODE_CHAR(codepoint)) continue;
+
+    if (u_ispunct(codepoint)) {
+      (*chars_map)[{codepoint}] = {kPunctuationMarker, codepoint};
+    }
+
+    if (u_isupper(codepoint)) {
+      const char32_t folded = u_foldCase(codepoint, U_FOLD_CASE_DEFAULT);
+      if (folded != codepoint && u_islower(folded)) {
+        (*chars_map)[{codepoint}] = {kUppercaseMarker, folded};
+      }
+    }
+  }
+
+  RETURN_IF_ERROR(RemoveRedundantMap(chars_map));
+#else
+  LOG(ERROR) << kCompileError;
+#endif
+  return absl::OkStatus();
+}
+
+// static
+absl::Status Builder::BuildRecaserMap(CharsMap* chars_map) {
+  RET_CHECK(chars_map);
+#ifdef ENABLE_NFKC_COMPILE
+  constexpr char32_t kUppercaseMarker =
+      static_cast<char32_t>(kCaseUppercase);
+  constexpr char32_t kTitlecaseMarker =
+      static_cast<char32_t>(kCaseTitlecase);
+
+  for (char32_t codepoint = 1; codepoint <= kMaxUnicode; ++codepoint) {
+    if (!U_IS_UNICODE_CHAR(codepoint) || !u_isupper(codepoint)) continue;
+
+    const char32_t folded = u_foldCase(codepoint, U_FOLD_CASE_DEFAULT);
+    if (folded == codepoint || !u_islower(folded)) continue;
+
+    chars_map->try_emplace({kUppercaseMarker, folded}, Chars{codepoint});
+    chars_map->try_emplace({kTitlecaseMarker, folded}, Chars{codepoint});
+  }
+
+  RETURN_IF_ERROR(RemoveRedundantMap(chars_map));
+#else
+  LOG(ERROR) << kCompileError;
+#endif
+  return absl::OkStatus();
+}
+
+// static
+absl::Status Builder::ComposeCharsMaps(const CharsMap& outer_chars_map,
+                                       CharsMap* chars_map, bool add_rest) {
+  RET_CHECK(chars_map);
+  for (auto& [source, target] : *chars_map) {
+    const auto found = outer_chars_map.find(target);
+    if (found != outer_chars_map.end()) target = found->second;
+  }
+  if (add_rest) {
+    for (const auto& [source, target] : outer_chars_map) {
+      chars_map->try_emplace(source, target);
+    }
+  }
   return absl::OkStatus();
 }
 

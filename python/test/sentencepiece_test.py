@@ -28,6 +28,7 @@ import pytest
 import sentencepiece as spm
 try:
   from sentencepiece import sentencepiece_pb2
+  from sentencepiece import sentencepiece_model_pb2
   has_protobuf = True
 except ImportError:
   has_protobuf = False
@@ -246,6 +247,46 @@ class TestSentencepieceProcessor(unittest.TestCase):
       for line in file:
         sp.DecodePieces(sp.EncodeAsPieces(line))
         sp.DecodeIds(sp.EncodeAsIds(line))
+
+  def test_case_encoding(self):
+    samples = [
+        'This IS a SHORT PHRASE ABOUT a PhD.',
+        'ΑΥΤΟ ΕΙΝΑΙ ΕΝΑ ΕΛΛΗΝΙΚΟ ΚΕΙΜΕΝΟ.',
+        'ЭТО ТЕКСТ НА РУССКОМ ЯЗЫКЕ.',
+        'ԱՅՍ ՀԱՅԵՐԵՆ ՏԵՔՍՏ Է։',
+        'ႧႤႵႱႲႨ ႵႠႰႧႳႪႠႣ.',
+        '日本語の文章です。',
+        'هذه جملة باللغة العربية.',
+    ]
+    model_writer = io.BytesIO()
+    spm.SentencePieceTrainer.train(
+        sentence_iterator=iter(samples * 4),
+        model_writer=model_writer,
+        model_type='unigram',
+        vocab_size=512,
+        hard_vocab_limit=False,
+        character_coverage=1.0,
+        byte_fallback=True,
+        input_sentence_size=0,
+        shuffle_input_sentence=False,
+        num_threads=1,
+        encode_unicode_case=True,
+        treat_whitespace_as_suffix=True,
+        bos_id=-1,
+        eos_id=0,
+        unk_id=1,
+    )
+
+    model_bytes = model_writer.getvalue()
+    processor = spm.SentencePieceProcessor(model_proto=model_bytes)
+    for sample in samples:
+      self.assertEqual(sample, processor.decode(processor.encode(sample)))
+
+    if has_protobuf:
+      model = sentencepiece_model_pb2.ModelProto()
+      model.ParseFromString(model_bytes)
+      self.assertTrue(model.normalizer_spec.encode_case)
+      self.assertTrue(model.denormalizer_spec.decode_case)
 
   def test_special_tokens_combinations(self):
     tid = threading.get_native_id()

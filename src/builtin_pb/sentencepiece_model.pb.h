@@ -1194,6 +1194,8 @@ class NormalizerSpec PROTOBUF_FINAL :
     kNameFieldNumber = 1,
     kPrecompiledCharsmapFieldNumber = 2,
     kNormalizationRuleTsvFieldNumber = 6,
+    kEncodeCaseFieldNumber = 7,
+    kDecodeCaseFieldNumber = 8,
     kAddDummyPrefixFieldNumber = 3,
     kRemoveExtraWhitespacesFieldNumber = 4,
     kEscapeWhitespacesFieldNumber = 5,
@@ -1258,6 +1260,32 @@ class NormalizerSpec PROTOBUF_FINAL :
   std::string* _internal_mutable_normalization_rule_tsv();
   public:
 
+  // optional bool encode_case = 7 [default = false];
+  bool has_encode_case() const;
+  private:
+  bool _internal_has_encode_case() const;
+  public:
+  void clear_encode_case();
+  bool encode_case() const;
+  void set_encode_case(bool value);
+  private:
+  bool _internal_encode_case() const;
+  void _internal_set_encode_case(bool value);
+  public:
+
+  // optional bool decode_case = 8 [default = false];
+  bool has_decode_case() const;
+  private:
+  bool _internal_has_decode_case() const;
+  public:
+  void clear_decode_case();
+  bool decode_case() const;
+  void set_decode_case(bool value);
+  private:
+  bool _internal_decode_case() const;
+  void _internal_set_decode_case(bool value);
+  public:
+
   // optional bool add_dummy_prefix = 3 [default = true];
   bool has_add_dummy_prefix() const;
   private:
@@ -1312,6 +1340,8 @@ class NormalizerSpec PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr name_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr precompiled_charsmap_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr normalization_rule_tsv_;
+  bool encode_case_;
+  bool decode_case_;
   bool add_dummy_prefix_;
   bool remove_extra_whitespaces_;
   bool escape_whitespaces_;
@@ -4142,7 +4172,7 @@ inline void NormalizerSpec::set_allocated_precompiled_charsmap(std::string* prec
 
 // optional bool add_dummy_prefix = 3 [default = true];
 inline bool NormalizerSpec::_internal_has_add_dummy_prefix() const {
-  bool value = (_has_bits_[0] & 0x00000008u) != 0;
+  bool value = (_has_bits_[0] & 0x00000020u) != 0;
   return value;
 }
 inline bool NormalizerSpec::has_add_dummy_prefix() const {
@@ -4150,7 +4180,7 @@ inline bool NormalizerSpec::has_add_dummy_prefix() const {
 }
 inline void NormalizerSpec::clear_add_dummy_prefix() {
   add_dummy_prefix_ = true;
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000020u;
 }
 inline bool NormalizerSpec::_internal_add_dummy_prefix() const {
   return add_dummy_prefix_;
@@ -4160,7 +4190,7 @@ inline bool NormalizerSpec::add_dummy_prefix() const {
   return _internal_add_dummy_prefix();
 }
 inline void NormalizerSpec::_internal_set_add_dummy_prefix(bool value) {
-  _has_bits_[0] |= 0x00000008u;
+  _has_bits_[0] |= 0x00000020u;
   add_dummy_prefix_ = value;
 }
 inline void NormalizerSpec::set_add_dummy_prefix(bool value) {
@@ -4170,7 +4200,7 @@ inline void NormalizerSpec::set_add_dummy_prefix(bool value) {
 
 // optional bool remove_extra_whitespaces = 4 [default = true];
 inline bool NormalizerSpec::_internal_has_remove_extra_whitespaces() const {
-  bool value = (_has_bits_[0] & 0x00000010u) != 0;
+  bool value = (_has_bits_[0] & 0x00000040u) != 0;
   return value;
 }
 inline bool NormalizerSpec::has_remove_extra_whitespaces() const {
@@ -4178,7 +4208,7 @@ inline bool NormalizerSpec::has_remove_extra_whitespaces() const {
 }
 inline void NormalizerSpec::clear_remove_extra_whitespaces() {
   remove_extra_whitespaces_ = true;
-  _has_bits_[0] &= ~0x00000010u;
+  _has_bits_[0] &= ~0x00000040u;
 }
 inline bool NormalizerSpec::_internal_remove_extra_whitespaces() const {
   return remove_extra_whitespaces_;
@@ -4188,7 +4218,7 @@ inline bool NormalizerSpec::remove_extra_whitespaces() const {
   return _internal_remove_extra_whitespaces();
 }
 inline void NormalizerSpec::_internal_set_remove_extra_whitespaces(bool value) {
-  _has_bits_[0] |= 0x00000010u;
+  _has_bits_[0] |= 0x00000040u;
   remove_extra_whitespaces_ = value;
 }
 inline void NormalizerSpec::set_remove_extra_whitespaces(bool value) {
@@ -4198,7 +4228,7 @@ inline void NormalizerSpec::set_remove_extra_whitespaces(bool value) {
 
 // optional bool escape_whitespaces = 5 [default = true];
 inline bool NormalizerSpec::_internal_has_escape_whitespaces() const {
-  bool value = (_has_bits_[0] & 0x00000020u) != 0;
+  bool value = (_has_bits_[0] & 0x00000080u) != 0;
   return value;
 }
 inline bool NormalizerSpec::has_escape_whitespaces() const {
@@ -4206,7 +4236,7 @@ inline bool NormalizerSpec::has_escape_whitespaces() const {
 }
 inline void NormalizerSpec::clear_escape_whitespaces() {
   escape_whitespaces_ = true;
-  _has_bits_[0] &= ~0x00000020u;
+  _has_bits_[0] &= ~0x00000080u;
 }
 inline bool NormalizerSpec::_internal_escape_whitespaces() const {
   return escape_whitespaces_;
@@ -4216,7 +4246,7 @@ inline bool NormalizerSpec::escape_whitespaces() const {
   return _internal_escape_whitespaces();
 }
 inline void NormalizerSpec::_internal_set_escape_whitespaces(bool value) {
-  _has_bits_[0] |= 0x00000020u;
+  _has_bits_[0] |= 0x00000080u;
   escape_whitespaces_ = value;
 }
 inline void NormalizerSpec::set_escape_whitespaces(bool value) {
@@ -4295,6 +4325,62 @@ inline void NormalizerSpec::set_allocated_normalization_rule_tsv(std::string* no
   normalization_rule_tsv_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), normalization_rule_tsv,
       GetArena());
   // @@protoc_insertion_point(field_set_allocated:sentencepiece.NormalizerSpec.normalization_rule_tsv)
+}
+
+// optional bool encode_case = 7 [default = false];
+inline bool NormalizerSpec::_internal_has_encode_case() const {
+  bool value = (_has_bits_[0] & 0x00000008u) != 0;
+  return value;
+}
+inline bool NormalizerSpec::has_encode_case() const {
+  return _internal_has_encode_case();
+}
+inline void NormalizerSpec::clear_encode_case() {
+  encode_case_ = false;
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline bool NormalizerSpec::_internal_encode_case() const {
+  return encode_case_;
+}
+inline bool NormalizerSpec::encode_case() const {
+  // @@protoc_insertion_point(field_get:sentencepiece.NormalizerSpec.encode_case)
+  return _internal_encode_case();
+}
+inline void NormalizerSpec::_internal_set_encode_case(bool value) {
+  _has_bits_[0] |= 0x00000008u;
+  encode_case_ = value;
+}
+inline void NormalizerSpec::set_encode_case(bool value) {
+  _internal_set_encode_case(value);
+  // @@protoc_insertion_point(field_set:sentencepiece.NormalizerSpec.encode_case)
+}
+
+// optional bool decode_case = 8 [default = false];
+inline bool NormalizerSpec::_internal_has_decode_case() const {
+  bool value = (_has_bits_[0] & 0x00000010u) != 0;
+  return value;
+}
+inline bool NormalizerSpec::has_decode_case() const {
+  return _internal_has_decode_case();
+}
+inline void NormalizerSpec::clear_decode_case() {
+  decode_case_ = false;
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline bool NormalizerSpec::_internal_decode_case() const {
+  return decode_case_;
+}
+inline bool NormalizerSpec::decode_case() const {
+  // @@protoc_insertion_point(field_get:sentencepiece.NormalizerSpec.decode_case)
+  return _internal_decode_case();
+}
+inline void NormalizerSpec::_internal_set_decode_case(bool value) {
+  _has_bits_[0] |= 0x00000010u;
+  decode_case_ = value;
+}
+inline void NormalizerSpec::set_decode_case(bool value) {
+  _internal_set_decode_case(value);
+  // @@protoc_insertion_point(field_set:sentencepiece.NormalizerSpec.decode_case)
 }
 
 // -------------------------------------------------------------------

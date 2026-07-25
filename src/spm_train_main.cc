@@ -115,6 +115,8 @@ ABSL_FLAG(std::string, normalization_rule_tsv, "",
           "Normalization rule TSV file. ");
 ABSL_FLAG(std::string, denormalization_rule_tsv, "",
           "Denormalization rule TSV file.");
+ABSL_FLAG(bool, encode_unicode_case, kDefaultNormalizerSpec.encode_case(),
+          "Encode Unicode case before segmentation and restore it on decode");
 ABSL_FLAG(bool, add_dummy_prefix, kDefaultNormalizerSpec.add_dummy_prefix(),
           "Add dummy whitespace at the beginning of text");
 ABSL_FLAG(bool, remove_extra_whitespaces,
@@ -270,13 +272,20 @@ int main(int argc, char* argv[]) {
   SetNormalizerSpecFromFlag(normalization_rule_tsv);
   SetNormalizerSpecFromFlag(add_dummy_prefix);
   SetNormalizerSpecFromFlag(remove_extra_whitespaces);
+  normalizer_spec.set_encode_case(
+      absl::GetFlag(FLAGS_encode_unicode_case));
 
-  if (!absl::GetFlag(FLAGS_denormalization_rule_tsv).empty()) {
-    denormalizer_spec.set_normalization_rule_tsv(
-        absl::GetFlag(FLAGS_denormalization_rule_tsv));
+  if (!absl::GetFlag(FLAGS_denormalization_rule_tsv).empty() ||
+      absl::GetFlag(FLAGS_encode_unicode_case)) {
+    if (!absl::GetFlag(FLAGS_denormalization_rule_tsv).empty()) {
+      denormalizer_spec.set_normalization_rule_tsv(
+          absl::GetFlag(FLAGS_denormalization_rule_tsv));
+    }
     denormalizer_spec.set_add_dummy_prefix(false);
     denormalizer_spec.set_remove_extra_whitespaces(false);
     denormalizer_spec.set_escape_whitespaces(false);
+    denormalizer_spec.set_decode_case(
+        absl::GetFlag(FLAGS_encode_unicode_case));
   }
 
   QCHECK_OK(sentencepiece::SentencePieceTrainer::PopulateModelTypeFromString(

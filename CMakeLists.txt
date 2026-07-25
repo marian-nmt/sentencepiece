@@ -15,12 +15,14 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 file(STRINGS "VERSION.txt" SPM_VERSION)
 message(STATUS "VERSION: ${SPM_VERSION}")
+set(SPM_ARTIFACT_NAME "sentencepiece" CACHE STRING
+  "Name of generated SentencePiece library artifacts")
 
 if(POLICY CMP0091)
   cmake_policy(SET CMP0091 NEW)
 endif()
 
-project(sentencepiece VERSION ${SPM_VERSION} LANGUAGES C CXX)
+project(${SPM_ARTIFACT_NAME} VERSION ${SPM_VERSION} LANGUAGES C CXX)
 
 option(SPM_ENABLE_NFKC_COMPILE "Enables NFKC compile" OFF)
 option(SPM_ENABLE_SHARED "Builds shared libaries in addition to static libraries." ON)

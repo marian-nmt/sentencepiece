@@ -1,0 +1,30 @@
+This IS a SHORT PHRASE ABOUT a PhD.
+THIS IS AN ALL CAPS SPAN.
+This is ordinary sentence casing.
+NASA and XML appear beside lowercase words.
+One TWO THREE FOUR five SIX.
+Before: ALL CAPS, AFTER punctuation.
+camelCase PascalCase snake_case and sPoNgEcAsE.
+I I I and A A A are single-letter spans.
+UPPER-case words can include hyphens.
+Quotes say "THIS IS IMPORTANT" today.
+English Title Case Uses Several Capitals.
+all lower case stays lower case.
+Straße, ÜBER, Österreich, and ÄPFEL test German letters.
+ÉCOLE, À PROPOS, déjà vu, and ÇA test French letters.
+ΑΥΤΟ ΕΙΝΑΙ ΕΝΑ ΕΛΛΗΝΙΚΟ ΚΕΙΜΕΝΟ.
+Αυτό είναι ένα Ελληνικό κείμενο.
+ЭТО ТЕКСТ НА РУССКОМ ЯЗЫКЕ.
+Это текст на Русском языке.
+ԱՅՍ ՀԱՅԵՐԵՆ ՏԵՔՍՏ Է։
+Այս հայերեն տեքստ է։
+ႧႤႵႱႲႨ ႵႠႰႧႳႪႠႣ.
+ტექსტი ქართულად.
+Numbers 123 and symbols +-= do not carry case.
+Tabs and repeated spaces remain normalization concerns.
+PhD eBay iPhone McDONALD mixedCase identifiers.
+This IS a SHORT PHRASE ABOUT a PhD.
+THIS IS AN ALL CAPS SPAN.
+NASA and XML appear beside lowercase words.
+ΑΥΤΟ ΕΙΝΑΙ ΕΝΑ ΕΛΛΗΝΙΚΟ ΚΕΙΜΕΝΟ.
+ЭТО ТЕКСТ НА РУССКОМ ЯЗЫКЕ.

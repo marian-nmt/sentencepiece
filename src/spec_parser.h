@@ -189,6 +189,8 @@ inline std::string PrintProto(const NormalizerSpec& message,
   PRINT_PARAM(remove_extra_whitespaces);
   PRINT_PARAM(escape_whitespaces);
   PRINT_PARAM(normalization_rule_tsv);
+  PRINT_PARAM(encode_case);
+  PRINT_PARAM(decode_case);
 
   os << "}\n";
 
@@ -268,6 +270,8 @@ absl::Status SentencePieceTrainer::SetProtoField(absl::string_view name,
   PARSE_BOOL(remove_extra_whitespaces);
   PARSE_BOOL(escape_whitespaces);
   PARSE_STRING(normalization_rule_tsv);
+  PARSE_BOOL(encode_case);
+  PARSE_BOOL(decode_case);
 
   return absl::StatusBuilder(absl::StatusCode::kNotFound)
          << "unknown field name \"" << name << "\" in NormalizerSpec.";

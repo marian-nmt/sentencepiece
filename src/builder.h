@@ -106,6 +106,16 @@ class Builder {
   // Makes NMT NFKC with Unicode case folding.
   static absl::Status BuildNmtNFKC_CFMap(CharsMap* chars_map);
 
+  // Maps cased characters to case markers plus their folded form.
+  static absl::Status BuildUncaserMap(CharsMap* chars_map);
+
+  // Maps case markers plus folded characters back to cased characters.
+  static absl::Status BuildRecaserMap(CharsMap* chars_map);
+
+  // Composes `outer_chars_map` over the values in `chars_map`.
+  static absl::Status ComposeCharsMaps(const CharsMap& outer_chars_map,
+                                       CharsMap* chars_map, bool add_rest);
+
   // Given NFKC maps, convert them to NFKD.
   static absl::Status BuildNFKDMap(CharsMap* chars_map);
 

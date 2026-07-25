@@ -15,9 +15,11 @@
 #include "normalizer.h"
 
 #include <cstddef>
+#include <functional>
 #include <utility>
 #include <vector>
 
+#include "case_encoder.h"
 #include "common.h"
 #include "third_party/absl/status/status.h"
 #include "third_party/absl/strings/match.h"
@@ -91,6 +93,15 @@ absl::Status Normalizer::Normalize(absl::string_view input,
 
   RETURN_IF_ERROR(status());
 
+  auto case_encoder = CaseEncoder::Create(
+      spec_->encode_case(), spec_->decode_case(),
+      spec_->remove_extra_whitespaces());
+  std::vector<size_t> internal_norm_to_orig;
+  std::vector<size_t>* effective_norm_to_orig = norm_to_orig;
+  if (case_encoder && effective_norm_to_orig == nullptr) {
+    effective_norm_to_orig = &internal_norm_to_orig;
+  }
+
   size_t consumed = 0;
 
   // Ignores heading space.
@@ -113,7 +124,9 @@ absl::Status Normalizer::Normalize(absl::string_view input,
   // Reserves the output buffer to avoid re-allocations.
   const size_t kReservedSize = input.size() * 1.5;
   normalized->reserve(kReservedSize);
-  if (norm_to_orig) norm_to_orig->reserve(kReservedSize);
+  if (effective_norm_to_orig) {
+    effective_norm_to_orig->reserve(kReservedSize);
+  }
 
   // Replaces white space with U+2581 (LOWER ONE EIGHT BLOCK)
   // if escape_whitespaces() is set (default = true).
@@ -121,10 +134,12 @@ absl::Status Normalizer::Normalize(absl::string_view input,
       spec_->escape_whitespaces() ? "\xe2\x96\x81" : " ";
 
   // adds kSpaceSymbol to the current context.
-  auto add_ws = [&consumed, &normalized, &norm_to_orig, &kSpaceSymbol]() {
+  auto add_ws = [&consumed, &normalized, &effective_norm_to_orig,
+                 &kSpaceSymbol]() {
     normalized->append(kSpaceSymbol.data(), kSpaceSymbol.size());
-    if (norm_to_orig) {
-      norm_to_orig->insert(norm_to_orig->end(), kSpaceSymbol.size(), consumed);
+    if (effective_norm_to_orig) {
+      effective_norm_to_orig->insert(effective_norm_to_orig->end(),
+                                     kSpaceSymbol.size(), consumed);
     }
   };
 
@@ -134,9 +149,20 @@ absl::Status Normalizer::Normalize(absl::string_view input,
   // "_world" as one symbol.
   if (!treat_whitespace_as_suffix_ && spec_->add_dummy_prefix()) add_ws();
 
+  using NormalizePrefixFn =
+      std::function<std::pair<absl::string_view, int>(absl::string_view)>;
+  NormalizePrefixFn normalize_prefix =
+      [this](absl::string_view value) { return NormalizePrefix(value); };
+  if (case_encoder) {
+    case_encoder->SetNormalizer(normalize_prefix);
+    normalize_prefix = [&case_encoder](absl::string_view value) {
+      return case_encoder->NormalizePrefix(value);
+    };
+  }
+
   bool is_prev_space = spec_->remove_extra_whitespaces();
   while (!input.empty()) {
-    auto p = NormalizePrefix(input);
+    auto p = normalize_prefix(input);
     absl::string_view sp = p.first;
 
     // Removes heading spaces in sentence piece,
@@ -151,7 +177,9 @@ absl::Status Normalizer::Normalize(absl::string_view input,
           add_ws();
         } else {
           *normalized += data[n];
-          if (norm_to_orig) norm_to_orig->push_back(consumed);
+          if (effective_norm_to_orig) {
+            effective_norm_to_orig->push_back(consumed);
+          }
         }
       }
       // Checks whether the last character of sp is whitespace.
@@ -171,9 +199,9 @@ absl::Status Normalizer::Normalize(absl::string_view input,
       const int length = normalized->size() - kSpaceSymbol.size();
       RET_CHECK_GE(length, 0);
       normalized->resize(length);
-      if (norm_to_orig) {
-        consumed = (*norm_to_orig)[length];
-        norm_to_orig->resize(length);
+      if (effective_norm_to_orig) {
+        consumed = (*effective_norm_to_orig)[length];
+        effective_norm_to_orig->resize(length);
       }
     }
   }
@@ -181,9 +209,12 @@ absl::Status Normalizer::Normalize(absl::string_view input,
   // Adds a space symbol as a suffix (default is false)
   if (treat_whitespace_as_suffix_ && spec_->add_dummy_prefix()) add_ws();
 
-  if (norm_to_orig) {
-    norm_to_orig->push_back(consumed);
-    RET_CHECK_EQ(norm_to_orig->size(), normalized->size() + 1);
+  if (effective_norm_to_orig) {
+    effective_norm_to_orig->push_back(consumed);
+    if (case_encoder) {
+      case_encoder->Postprocess(normalized, effective_norm_to_orig);
+    }
+    RET_CHECK_EQ(effective_norm_to_orig->size(), normalized->size() + 1);
   }
 
   return absl::OkStatus();

@@ -18,6 +18,31 @@ It implements **subword units**—including **Byte-Pair-Encoding (BPE)** [[Sennr
 
 ---
 
+## Unicode Case Encoding
+
+This fork includes inline Unicode case encoding from
+[Jain et al. (2023), *Perplexity-Driven Case Encoding Needs Augmentation for
+CAPITALIZATION Robustness*](https://aclanthology.org/2023.ijcnlp-short.17/).
+It lowercases cased scripts while adding case markers before subword training,
+allowing the unigram model to learn whether each marker should remain attached
+to its word. Decoding restores the original casing inside SentencePiece.
+
+Train a case-aware model with:
+
+```bash
+spm_train \
+    --encode_unicode_case=true \
+    --treat_whitespace_as_suffix=true \
+    --input=training_data \
+    --model_prefix=case_encoded
+```
+
+Case-aware models must be encoded and decoded with this fork. For translation
+robustness, combine case encoding with uppercase, lowercase, and title-case
+training augmentation as described in the paper.
+
+---
+
 ## Quick Start (Python)
 
 SentencePiece provides an easy-to-use Python module. Install it via `pip`:

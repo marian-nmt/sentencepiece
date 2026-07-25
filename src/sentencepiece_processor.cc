@@ -814,7 +814,7 @@ absl::Status SentencePieceProcessor::Decode(
   // add_dummy_prefix.
   auto DecodeSentencePiece =
       [&](absl::string_view piece, int id,
-          bool is_bos_ws) -> std::pair<std::string, bool> {
+        bool is_bos_ws, bool is_eos_ws) -> std::pair<std::string, bool> {
     if (IsControl(id)) {                 // <s>, </s>
       return std::make_pair("", false);  // invisible symbol.
     } else if (IsUnknown(id)) {
@@ -826,7 +826,10 @@ absl::Status SentencePieceProcessor::Decode(
     }
 
     bool has_bos_ws = false;  // whether the token starts with a kSpaceSymbol
-    if (is_bos_ws &&
+  const bool whitespace_as_suffix =
+    model_proto_ && model_proto_->has_trainer_spec() &&
+    model_proto_->trainer_spec().treat_whitespace_as_suffix();
+  if (!whitespace_as_suffix && is_bos_ws &&
         (!model_proto_ ||
          (model_proto_ &&
           (model_proto_->normalizer_spec().add_dummy_prefix() ||
@@ -840,6 +843,11 @@ absl::Status SentencePieceProcessor::Decode(
         // if we are removing extra whitespace, we remove all leading whitespace
         has_bos_ws = false;
       }
+    } else if (whitespace_as_suffix && is_eos_ws &&
+               (model_proto_->normalizer_spec().add_dummy_prefix() ||
+                model_proto_->normalizer_spec().remove_extra_whitespaces()) &&
+               absl::EndsWith(piece, kSpaceSymbol)) {
+      piece.remove_suffix(kSpaceSymbol.size());
     }
 
     return std::make_pair(absl::StrReplaceAll(piece, {{kSpaceSymbol, " "}}),
@@ -932,7 +940,8 @@ absl::Status SentencePieceProcessor::Decode(
 
       byte_start = i + 1;
       std::tie(decoded, bos_ws_seen) =
-          DecodeSentencePiece(sp.piece(), sp.id(), is_bos_ws);
+          DecodeSentencePiece(sp.piece(), sp.id(), is_bos_ws,
+                    i == spt->pieces_size() - 1);
 
       SetSurface(i, decoded);
     }
@@ -940,7 +949,49 @@ absl::Status SentencePieceProcessor::Decode(
   RETURN_IF_ERROR(ProcessBytePieces(byte_start, spt->pieces_size()));
 
   if (denormalizer_) {
-    *text = denormalizer_->Normalize(*text);
+    if (model_proto_ && model_proto_->has_denormalizer_spec() &&
+        model_proto_->denormalizer_spec().decode_case()) {
+      std::string denormalized;
+      std::vector<size_t> norm_to_orig;
+      RETURN_IF_ERROR(
+          denormalizer_->Normalize(*text, &denormalized, &norm_to_orig));
+      *text = denormalized;
+
+      std::map<size_t, size_t> orig_to_norm;
+      for (size_t index = 0; index < norm_to_orig.size(); ++index) {
+        orig_to_norm.try_emplace(norm_to_orig[index], index);
+      }
+
+      size_t denormalized_surface_index = 0;
+      size_t encoded_surface_index = 0;
+      int64_t last_consumed_byte = -1;
+      for (int index = 0; index < spt->pieces_size(); ++index) {
+        auto* piece = spt->mutable_pieces(index);
+        const size_t surface_size = piece->surface().size();
+
+        std::string surface;
+        for (size_t byte = encoded_surface_index;
+             byte < encoded_surface_index + surface_size; ++byte) {
+          const auto normalized_index = orig_to_norm.find(byte + 1);
+          if (normalized_index == orig_to_norm.end()) continue;
+          for (int64_t output_byte = last_consumed_byte + 1;
+               output_byte <=
+               static_cast<int64_t>(normalized_index->second) - 1;
+               ++output_byte) {
+            surface.push_back(denormalized[output_byte]);
+          }
+          last_consumed_byte = normalized_index->second - 1;
+        }
+
+        encoded_surface_index += surface_size;
+        piece->set_surface(surface);
+        piece->set_begin(denormalized_surface_index);
+        denormalized_surface_index += surface.size();
+        piece->set_end(denormalized_surface_index);
+      }
+    } else {
+      *text = denormalizer_->Normalize(*text);
+    }
   }
 
   return absl::OkStatus();
@@ -1701,8 +1752,12 @@ absl::Status SentencePieceProcessor::DecodeOptimized(
     return absl::OkStatus();
   };
 
+  const bool whitespace_as_suffix =
+      model_proto_ && model_proto_->has_trainer_spec() &&
+      model_proto_->trainer_spec().treat_whitespace_as_suffix();
   bool is_bos_ws = true;
-  for (const auto& item : active_input) {
+  for (size_t item_index = 0; item_index < active_input.size(); ++item_index) {
+    const auto& item = active_input[item_index];
     int id = -1;
     absl::string_view piece;
     if constexpr (std::is_same_v<T, int>) {
@@ -1733,7 +1788,7 @@ absl::Status SentencePieceProcessor::DecodeOptimized(
 
       absl::string_view p = piece;
       bool has_bos_ws = false;
-      if (is_bos_ws &&
+        if (!whitespace_as_suffix && is_bos_ws &&
           (!model_proto_ ||
            (model_proto_ &&
             (model_proto_->normalizer_spec().add_dummy_prefix() ||
@@ -1743,6 +1798,13 @@ absl::Status SentencePieceProcessor::DecodeOptimized(
             model_proto_->normalizer_spec().remove_extra_whitespaces()) {
           has_bos_ws = false;
         }
+      } else if (whitespace_as_suffix &&
+                 item_index == active_input.size() - 1 &&
+                 (model_proto_->normalizer_spec().add_dummy_prefix() ||
+                  model_proto_->normalizer_spec()
+                      .remove_extra_whitespaces()) &&
+                 absl::EndsWith(p, kSpaceSymbol)) {
+        p.remove_suffix(kSpaceSymbol.size());
       }
 
       if (IsUnknown(id)) {

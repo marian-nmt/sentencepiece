@@ -86,6 +86,7 @@ set(SPM_SRCS
   ${SPM_MODEL_PROTO_HDRS}
   ${SPM_MODEL_PROTO_SRCS}
   bpe_model.h
+  case_encoder.h
   common.h
   normalizer.h
   util.h
@@ -100,6 +101,7 @@ set(SPM_SRCS
   testharness.h
   unigram_model.h
   bpe_model.cc
+  case_encoder.cc
   char_model.cc
   filesystem.cc
   init.cc
@@ -144,6 +146,7 @@ set(SPM_TEST_SRCS
   bpe_model_test.cc
   bpe_model_trainer_test.cc
   builder_test.cc
+  case_encoder_test.cc
   invalid_model_test.cc
   char_model_test.cc
   char_model_trainer_test.cc
@@ -255,8 +258,16 @@ else()
   set(SPM_INSTALLTARGETS sentencepiece-static sentencepiece_train-static)
 endif()
 
-set_target_properties(sentencepiece-static PROPERTIES OUTPUT_NAME "sentencepiece")
-set_target_properties(sentencepiece_train-static PROPERTIES OUTPUT_NAME "sentencepiece_train")
+set_target_properties(sentencepiece-static PROPERTIES
+  OUTPUT_NAME "${SPM_ARTIFACT_NAME}")
+set_target_properties(sentencepiece_train-static PROPERTIES
+  OUTPUT_NAME "${SPM_ARTIFACT_NAME}_train")
+if (SPM_ENABLE_SHARED)
+  set_target_properties(sentencepiece PROPERTIES
+    OUTPUT_NAME "${SPM_ARTIFACT_NAME}")
+  set_target_properties(sentencepiece_train PROPERTIES
+    OUTPUT_NAME "${SPM_ARTIFACT_NAME}_train")
+endif()
 
 if (NOT WIN32)
   set(CMAKE_CXX_FLAGS "-O3 -Wall -fPIC ${CMAKE_CXX_FLAGS}")
@@ -333,9 +344,7 @@ add_custom_target(generate_installed_headers ALL
 
 install(FILES "${GENERATED_HEADERS_DIR}/sentencepiece_trainer.h" "${GENERATED_HEADERS_DIR}/sentencepiece_processor.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-if (NOT SPM_PROTOBUF_PROVIDER STREQUAL "internal")
-  install(FILES ${SPM_PROTO_HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-endif()
+install(FILES ${SPM_PROTO_HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/data" data_dir)
 

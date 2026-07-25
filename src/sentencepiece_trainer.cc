@@ -45,6 +45,9 @@ static constexpr const char* kNormalizerKeys[] = {
     "add_dummy_prefix",
     "escape_whitespaces",
     "remove_extra_whitespaces",
+    "encode_unicode_case",
+    "encode_case",
+    "decode_case",
     "name",
     "precompiled_charsmap",
 };
@@ -196,6 +199,16 @@ absl::Status SentencePieceTrainer::MergeSpecsFromArgs(
       denormalizer_spec->set_remove_extra_whitespaces(false);
       denormalizer_spec->set_escape_whitespaces(false);
       continue;
+    } else if (key == "encode_unicode_case") {
+      bool encode_unicode_case = false;
+      RET_CHECK(absl::SimpleAtob(value, &encode_unicode_case))
+          << "Cannot parse encode_unicode_case=" << value;
+      normalizer_spec->set_encode_case(encode_unicode_case);
+      denormalizer_spec->set_decode_case(encode_unicode_case);
+      denormalizer_spec->set_add_dummy_prefix(false);
+      denormalizer_spec->set_remove_extra_whitespaces(false);
+      denormalizer_spec->set_escape_whitespaces(false);
+      continue;
     } else if (key == "minloglevel") {
       int v = 0;
       RET_CHECK(absl::SimpleAtoi(value, &v));
@@ -304,6 +317,44 @@ absl::Status SentencePieceTrainer::PopulateNormalizerSpec(
           normalizer_spec->name(),
           normalizer_spec->mutable_precompiled_charsmap()));
     }
+  }
+
+  if (normalizer_spec->encode_case() && !is_denormalizer) {
+    normalizer::Builder::CharsMap chars_map;
+    if (!normalizer_spec->precompiled_charsmap().empty()) {
+      RETURN_IF_ERROR(normalizer::Builder::DecompileCharsMap(
+          normalizer_spec->precompiled_charsmap(), &chars_map));
+    }
+
+    std::string precompiled_uncaser;
+    RETURN_IF_ERROR(normalizer::Builder::GetPrecompiledCharsMap(
+        "case_uncaser", &precompiled_uncaser));
+    normalizer::Builder::CharsMap uncaser;
+    RETURN_IF_ERROR(normalizer::Builder::DecompileCharsMap(precompiled_uncaser,
+                                                           &uncaser));
+    RETURN_IF_ERROR(normalizer::Builder::ComposeCharsMaps(
+        uncaser, &chars_map, true));
+    RETURN_IF_ERROR(normalizer::Builder::CompileCharsMap(
+        chars_map, normalizer_spec->mutable_precompiled_charsmap()));
+  }
+
+  if (normalizer_spec->decode_case() && is_denormalizer) {
+    normalizer::Builder::CharsMap chars_map;
+    if (!normalizer_spec->precompiled_charsmap().empty()) {
+      RETURN_IF_ERROR(normalizer::Builder::DecompileCharsMap(
+          normalizer_spec->precompiled_charsmap(), &chars_map));
+    }
+
+    std::string precompiled_recaser;
+    RETURN_IF_ERROR(normalizer::Builder::GetPrecompiledCharsMap(
+        "case_recaser", &precompiled_recaser));
+    normalizer::Builder::CharsMap recaser;
+    RETURN_IF_ERROR(normalizer::Builder::DecompileCharsMap(precompiled_recaser,
+                                                           &recaser));
+    RETURN_IF_ERROR(normalizer::Builder::ComposeCharsMaps(
+        chars_map, &recaser, true));
+    RETURN_IF_ERROR(normalizer::Builder::CompileCharsMap(
+        recaser, normalizer_spec->mutable_precompiled_charsmap()));
   }
 
   return absl::OkStatus();
