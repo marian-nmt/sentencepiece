@@ -26,7 +26,8 @@ namespace {
 constexpr size_t kNotFound = static_cast<size_t>(-1);
 constexpr int kSinkState = -1;
 
-// Implements Uu+(sss|p|$)+Uu+(sss|p|$)+(Uu+(sss|p|$)+)+.
+// Recognizes uppercase spans containing at least three words.
+// Grammar: Uu+(sss|p|$)+Uu+(sss|p|$)+(Uu+(sss|p|$)+)+.
 constexpr int kTransitions[][4] = {
     {7, kSinkState, kSinkState, kSinkState},
     {kSinkState, 4, 5, 1},
@@ -294,10 +295,10 @@ std::pair<absl::string_view, int> UpperCaseDecoder::NormalizePrefix(
 
   if (input_.front() == kCaseAllUppercase) {
     replace_input_front(kCaseUppercase);
-    all_uppercase_ = true;
+    in_all_uppercase_span_ = true;
   } else if (input_.front() == kCaseTitlecase ||
              input_.front() == kCaseLowercase) {
-    all_uppercase_ = false;
+    in_all_uppercase_span_ = false;
   }
 
   auto result = CaseEncoder::NormalizePrefix(input_);
@@ -305,34 +306,37 @@ std::pair<absl::string_view, int> UpperCaseDecoder::NormalizePrefix(
   if (result.first.empty() || consumed == 0) return result;
 
   if (input_.front() == kCaseUppercase) {
-    if (state_ == 0) {
-      input_.remove_prefix(consumed - 1);
-      replace_input_front(kCaseUppercase);
-      state_ = 1;
-    } else if (state_ == 1) {
-      if (consumed > 1) {
+    switch (state_) {
+      case State::kNormal:
         input_.remove_prefix(consumed - 1);
         replace_input_front(kCaseUppercase);
-        result.second = consumed - 1;
-      } else {
-        input_.remove_prefix(consumed);
-        result.first.remove_prefix(1);
-        result.second = 0;
-        state_ = 0;
-      }
+        state_ = State::kUppercaseRun;
+        break;
+      case State::kUppercaseRun:
+        if (consumed > 1) {
+          input_.remove_prefix(consumed - 1);
+          replace_input_front(kCaseUppercase);
+          result.second = consumed - 1;
+        } else {
+          input_.remove_prefix(consumed);
+          result.first.remove_prefix(1);
+          result.second = 0;
+          state_ = State::kNormal;
+        }
+        break;
     }
   } else if (input_.front() == kCaseLowercase) {
     input_.remove_prefix(consumed);
     result.first.remove_prefix(1);
-    state_ = 0;
-  } else if (all_uppercase_) {
+    state_ = State::kNormal;
+  } else if (in_all_uppercase_span_) {
     result.first = absl::string_view(input.data(), result.first.size());
     input_.remove_prefix(consumed - 1);
     replace_input_front(kCaseUppercase);
-    state_ = 1;
+    state_ = State::kUppercaseRun;
   } else {
     input_.remove_prefix(consumed);
-    state_ = 0;
+    state_ = State::kNormal;
   }
 
   return result;

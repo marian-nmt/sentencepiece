@@ -93,10 +93,15 @@ class UpperCaseDecoder : public CaseEncoder {
       absl::string_view input) override;
 
  private:
+  enum class State {
+    kNormal,
+    kUppercaseRun,
+  };
+
   std::unique_ptr<std::string> buffer_;
   absl::string_view input_;
-  int state_ = 0;
-  bool all_uppercase_ = false;
+  State state_ = State::kNormal;
+  bool in_all_uppercase_span_ = false;
 };
 
 }  // namespace normalizer

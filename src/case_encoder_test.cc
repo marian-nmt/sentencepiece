@@ -80,6 +80,21 @@ TEST(CaseEncoderTest, NormalizerOverloadsAndUncasedScripts) {
   }
 }
 
+TEST(CaseEncoderTest, DecoderStateMachine) {
+  NormalizerSpec decoder_spec;
+  decoder_spec.set_decode_case(true);
+  decoder_spec.set_add_dummy_prefix(false);
+  decoder_spec.set_remove_extra_whitespaces(false);
+  decoder_spec.set_escape_whitespaces(false);
+  ASSERT_OK(SentencePieceTrainer::PopulateNormalizerSpec(&decoder_spec, true));
+
+  const Normalizer decoder(decoder_spec);
+  EXPECT_EQ("This IS a SHORT PHRASE ABOUT a PhD.",
+            decoder.Normalize("Tthis Uis a Ashort phrase about La TphTd."));
+  EXPECT_EQ("ONE TWO THREE then MixedCase",
+            decoder.Normalize("Aone two three Lthen TmixedTcase"));
+}
+
 TEST(CaseEncoderTest, LegacyModelCompatibility) {
   SentencePieceProcessor processor;
   ASSERT_OK(processor.Load(
