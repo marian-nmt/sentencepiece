@@ -303,7 +303,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
     self.assertEqual([sp.bos_id()] + sp.encode('a'), sp.encode('a', add_bos=True))
     self.assertEqual(sp.encode('a') + [sp.eos_id()], sp.encode('a', add_eos=True))
     self.assertEqual([sp.bos_id()] + sp.encode('a') + [sp.eos_id()], sp.encode('a', add_bos=True, add_eos=True))
-    
+
     self.assertEqual([sp.IdToPiece(sp.bos_id())] + sp.encode('a', return_type=str), sp.encode('a', add_bos=True, return_type=str))
 
     # 2. USER_DEFINED
@@ -1256,7 +1256,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
 
   def test_offset_mapping(self):
     sp = self.sp_
-    
+
     # helper to compute expected offsets from proto in python
     def get_expected_offsets(text, proto):
       expected = []
@@ -1274,14 +1274,14 @@ class TestSentencepieceProcessor(unittest.TestCase):
     self.assertIn('ids', res)
     self.assertIn('pieces', res)
     self.assertIn('offsets', res)
-    
+
     self.assertEqual(len(res['ids']), len(res['pieces']))
     self.assertEqual(len(res['ids']), len(res['offsets']))
-    
+
     proto = sp.encode(text, return_type='proto')
     expected = get_expected_offsets(text, proto)
     self.assertEqual(res['offsets'], expected)
-    
+
     for (start, end), p in zip(res['offsets'], proto.pieces):
       self.assertEqual(text[start:end], p.surface)
 
@@ -1291,7 +1291,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
     proto_unicode = sp.encode(unicode_text, return_type='proto')
     expected_unicode = get_expected_offsets(unicode_text, proto_unicode)
     self.assertEqual(res_unicode['offsets'], expected_unicode)
-    
+
     for (start, end), p in zip(res_unicode['offsets'], proto_unicode.pieces):
       self.assertEqual(unicode_text[start:end], p.surface)
 
@@ -1328,7 +1328,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
 
   def test_decode_offset_mapping(self):
     sp = self.sp_
-    
+
     # helper to compute expected offsets from proto in python
     def get_expected_offsets(text, proto):
       expected = []
@@ -1342,7 +1342,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
     # We start with some IDs
     text = "hello world"
     ids = sp.encode(text)
-    
+
     # 1. Test decode IDs to offset mapping (default: return_bytes=False -> Unicode offsets)
     res = sp.decode(ids, return_type='offset_mapping')
     self.assertIsInstance(res, dict)
@@ -1351,16 +1351,16 @@ class TestSentencepieceProcessor(unittest.TestCase):
     self.assertIn('pieces', res)
     self.assertIn('offsets', res)
     self.assertEqual(res['ids'], ids)
-    
+
     decoded_text = sp.decode(ids)
     self.assertEqual(res['text'], decoded_text)
-    
+
     # We can compare against proto
     proto = sp.decode(ids, return_type='proto')
     decoded_text = sp.decode(ids)
     expected = get_expected_offsets(decoded_text, proto)
     self.assertEqual(res['offsets'], expected)
-    
+
     for (start, end), p in zip(res['offsets'], proto.pieces):
       self.assertEqual(decoded_text[start:end], p.surface)
 
@@ -1382,7 +1382,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
     res_pieces = sp.decode(pieces_str, return_type='offset_mapping')
     self.assertEqual(res['offsets'], res_pieces['offsets'])
     self.assertEqual(res['pieces'], res_pieces['pieces'])
-    
+
     pieces_bytes = [p.encode('utf-8') for p in pieces_str]
     res_pieces_bytes = sp.decode(pieces_bytes, return_type='offset_mapping')
     # Because input was bytes, it should automatically return bytes offsets/pieces
@@ -1411,7 +1411,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
 
     # 1. Single ID input
     self.assertEqual(sp.decode(ids, return_type=bytes), text.encode('utf-8'))
-    
+
     # 2. Pieces input (str pieces) -> forces bytes output
     self.assertEqual(sp.decode(pieces_str, return_type=bytes), text.encode('utf-8'))
 
@@ -1443,11 +1443,11 @@ class TestSentencepieceProcessor(unittest.TestCase):
     sp = self.sp_
     text = "hello world"
     ids = sp.encode(text)
-    
+
     # out_type works as alias for return_type
     self.assertEqual(sp.encode(text, out_type=int), ids)
     self.assertEqual(sp.decode(ids, out_type=str), text)
-    
+
     # Cannot specify both
     with self.assertRaises(ValueError):
       sp.encode(text, return_type=int, out_type=int)
@@ -1460,7 +1460,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
       # Map 'A' (0041) to 'B' (0042)
       f.write("0041\t0042\n")
       tsv_path = f.name
-      
+
     try:
       sp = spm.SentencePieceNormalizer(rule_tsv=tsv_path)
       self.assertEqual('BBB', sp.normalize('AAA'))
@@ -1472,7 +1472,7 @@ class TestSentencepieceProcessor(unittest.TestCase):
     model_path = os.path.join(HERE, 'test_model.model')
     with open(model_path, 'rb') as f:
       model_proto = f.read()
-      
+
     sp = spm.SentencePieceNormalizer(model_proto=model_proto)
     self.assertEqual('KADOKAWAABC', sp.normalize('ＫＡＤＯＫＡＷＡABC'))
 
@@ -1480,22 +1480,22 @@ class TestSentencepieceProcessor(unittest.TestCase):
     sp = self.sp_
     text_str = "hello world"
     text_bytes = b"hello world"
-    
+
     # Expected pieces (as str)
     pieces_str = sp.encode(text_str, return_type=str)
     self.assertTrue(all(isinstance(p, str) for p in pieces_str))
-    
+
     # Expected pieces (as bytes)
     pieces_bytes = [p.encode('utf-8') for p in pieces_str]
-    
+
     # 1. return_type=str always returns str
     self.assertEqual(sp.encode(text_str, return_type=str), pieces_str)
     self.assertEqual(sp.encode(text_bytes, return_type=str), pieces_str)
-    
+
     # 2. return_type=bytes always returns bytes
     self.assertEqual(sp.encode(text_str, return_type=bytes), pieces_bytes)
     self.assertEqual(sp.encode(text_bytes, return_type=bytes), pieces_bytes)
-    
+
     # 3. Batch versions
     self.assertEqual(sp.encode([text_str, text_str], return_type=str), [pieces_str, pieces_str])
     self.assertEqual(sp.encode([text_bytes, text_bytes], return_type=str), [pieces_str, pieces_str])
@@ -1629,14 +1629,14 @@ class TestSentencepieceProcessor(unittest.TestCase):
         method(-1)
       with self.assertRaises(IndexError):
         method(vocab_size)
-      
+
       # Batch list
       res_batch = method([0, 1, 2])
       self.assertIsInstance(res_batch, list)
       self.assertEqual(len(res_batch), 3)
       with self.assertRaises(IndexError):
         method([0, -1])
-          
+
       # Batch tuple
       res_tuple = method((0, 1))
       self.assertIsInstance(res_tuple, list)

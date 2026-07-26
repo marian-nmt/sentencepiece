@@ -10,7 +10,7 @@ INSTALL_DIR=./build/root
 if [ -f ./sentencepiece/src/CMakeLists.txt ]; then
   SRC_DIR=./sentencepiece
 elif [ -f ../src/CMakeLists.txt ]; then
-  SRC_DIR=..  
+  SRC_DIR=..
 else
   # Try tagged version. Othewise, use head.
   git clone https://github.com/google/sentencepiece.git -b v"${VERSION}" --depth 1 || \
