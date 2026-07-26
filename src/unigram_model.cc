@@ -1015,7 +1015,7 @@ EncodeResult Model::EncodeOptimized(absl::string_view normalized) const {
         auto &target_node = best_path_ends_at[key_pos];
         const auto length = (key_pos - starts_at);
         // User defined symbol receives extra bonus to always be selected.
-        const auto score = IsUserDefinedInlined(ret)
+        const double score = IsUserDefinedInlined(ret)
                                ? GetUserDefinedScore(length)
                                : GetScoreInlined(ret);
         const auto candidate_best_path_score =
